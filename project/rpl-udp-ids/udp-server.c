@@ -32,6 +32,7 @@
 #include "net/netstack.h"
 #include "net/ipv6/simple-udp.h"
 #include "app-message.h"
+#include "icmp6-stats.h"
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -76,6 +77,9 @@ udp_rx_callback(struct simple_udp_connection *c,
 PROCESS_THREAD(udp_server_process, ev, data)
 {
   PROCESS_BEGIN();
+
+  /* Initialize ICMP6/RPL statistics */
+  icmp6_stats_init();
 
   /* Initialize DAG root */
   NETSTACK_ROUTING.root_start();

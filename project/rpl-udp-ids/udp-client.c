@@ -7,10 +7,12 @@
 #include "shell.h"
 #include "shell-commands.h"
 #include "app-message.h"
+#include "icmp6-stats.h"
 #if ROUTING_CONF_RPL_LITE
 #include "net/routing/rpl-lite/rpl.h"
 #elif ROUTING_CONF_RPL_CLASSIC
 #include "net/routing/rpl-classic/rpl.h"
+#include "net/routing/rpl-classic/rpl-private.h"
 #endif
 
 #include "sys/log.h"
@@ -22,6 +24,7 @@
 #define UDP_SERVER_PORT	5678
 
 #define SEND_INTERVAL		  (60 * CLOCK_SECOND)
+#define SHOW_ENERGEST             (0 && ENERGEST_CONF_ON)
 
 static struct simple_udp_connection udp_conn;
 
@@ -71,13 +74,13 @@ static struct shell_command_set_t client_shell_command_set = {
   .commands = client_commands,
 };
 /*---------------------------------------------------------------------------*/
-#if ENERGEST_CONF_ON
+#if SHOW_ENERGEST
 static inline unsigned long
 to_seconds(uint64_t time)
 {
   return (unsigned long)(time / ENERGEST_SECOND);
 }
-#endif /* ENERGEST_CONF_ON */
+#endif /* SHOW_ENERGEST */
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_client_process, ev, data)
 {
@@ -85,8 +88,14 @@ PROCESS_THREAD(udp_client_process, ev, data)
   static uint32_t count;
   static app_message_t msg;
   uip_ipaddr_t dest_ipaddr;
+  rpl_instance_t *default_instance;
+  uint16_t rank;
+  uint8_t dag_version;
 
   PROCESS_BEGIN();
+
+  /* Initialize ICMP6/RPL statistics */
+  icmp6_stats_init();
 
   /* Initialize UDP connection */
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
@@ -105,9 +114,20 @@ PROCESS_THREAD(udp_client_process, ev, data)
       LOG_INFO_("\n");
       memset(&msg, 0, sizeof(msg));
       app_write_uint32(msg.seqno, count);
-      if(curr_instance.used) {
-        app_write_uint16(msg.rpl_rank, curr_instance.dag.rank);
-      }
+      default_instance = rpl_get_default_instance();
+      rank = default_instance ? default_instance->dag.rank : RPL_INFINITE_RANK;
+      dag_version = default_instance ? default_instance->dag.version : 0;
+      app_write_uint16(msg.rpl_rank, default_instance->dag.rank);
+      LOG_INFO("DATA: sq:%"PRIu32",rank:%3u,ver:%u",
+               count, rank, dag_version);
+      LOG_INFO_(",disr:%"PRIu32",diss:%"PRIu32,
+                icmp6_stats.dis_uc_recv + icmp6_stats.dis_mc_recv,
+                icmp6_stats.dis_uc_sent + icmp6_stats.dis_mc_sent);
+      LOG_INFO_(",dior:%"PRIu32",dios:%"PRIu32,
+                icmp6_stats.dio_uc_recv + icmp6_stats.dio_mc_recv,
+                icmp6_stats.dio_uc_sent + icmp6_stats.dio_mc_sent);
+      LOG_INFO_(",diar:%"PRIu32",tots:%"PRIu32"\n",
+                icmp6_stats.dao_recv, icmp6_stats.rpl_total_sent);
       simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
       count++;
     } else {
@@ -119,7 +139,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
       - CLOCK_SECOND + (random_rand() % (2 * CLOCK_SECOND)));
 
     /* Example printing energest data */
-#if ENERGEST_CONF_ON
+#if SHOW_ENERGEST
     /*
      * Update all energest times. Should always be called before energest
      * times are read.
@@ -138,7 +158,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
            to_seconds(ENERGEST_GET_TOTAL_TIME()
                       - energest_type_time(ENERGEST_TYPE_TRANSMIT)
                       - energest_type_time(ENERGEST_TYPE_LISTEN)));
-#endif /* ENERGEST_CONF_ON */
+#endif /* SHOW_ENERGEST */
   }
 
   PROCESS_END();
