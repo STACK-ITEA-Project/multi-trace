@@ -32,5 +32,6 @@
 #define PROJECT_CONF_H_
 
 #define ENERGEST_CONF_ON 1
+#define LOG_CONF_WITH_ANNOTATE 1
 
 #endif /* PROJECT_CONF_H_ */
