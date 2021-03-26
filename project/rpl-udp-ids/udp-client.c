@@ -63,6 +63,7 @@ PT_THREAD(cmd_attack(struct pt *pt, shell_output_func output, char *args))
   PT_BEGIN(pt);
   SHELL_OUTPUT(output, "SINK HOLE ATTACK!\n");
   icmp6_stats_sink_hole = true;
+  icmp6_stats_drop_fwd_udp = true;
   rpl_timers_dio_reset("SINK HOLE ATTACK!");
   PT_END(pt);
 }

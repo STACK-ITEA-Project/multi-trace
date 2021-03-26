@@ -47,6 +47,7 @@
 
 struct icmp6_stats icmp6_stats;
 bool icmp6_stats_sink_hole = false;
+bool icmp6_stats_drop_fwd_udp = false;
 /*---------------------------------------------------------------------------*/
 static const char *
 get_proto_as_string(uint8_t proto)
@@ -199,10 +200,14 @@ ip_output(const linkaddr_t *localdest)
   uint8_t proto;
 
   header = uipbuf_get_last_header(uip_buf, uip_len, &proto);
-  is_from_me =  uip_ds6_is_my_addr(&UIP_IP_BUF->srcipaddr);
+  is_from_me = uip_ds6_is_my_addr(&UIP_IP_BUF->srcipaddr);
   LOG_INFO("%s %s packet to ", is_from_me ? "Outgoing" : "Forwarding",
            get_proto_as_string(proto));
   LOG_INFO_6ADDR(&UIP_IP_BUF->destipaddr);
+  if(!is_from_me) {
+    LOG_INFO_(" from ");
+    LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
+  }
   LOG_INFO_("\n");
   if(is_from_me && proto == UIP_PROTO_ICMP6 && header != NULL) {
     icmp_hdr = (struct uip_icmp_hdr *)header;
@@ -225,6 +230,14 @@ ip_output(const linkaddr_t *localdest)
       }
     }
   }
+
+  if(!is_from_me && icmp6_stats_drop_fwd_udp && proto == UIP_PROTO_UDP) {
+    LOG_INFO("Dropping UDP forwarded from ");
+    LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
+    LOG_INFO_("\n");
+    return NETSTACK_IP_DROP;
+  }
+
   return NETSTACK_IP_PROCESS;
 }
 /*---------------------------------------------------------------------------*/
