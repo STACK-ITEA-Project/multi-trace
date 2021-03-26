@@ -10,6 +10,7 @@
 #include "icmp6-stats.h"
 #if ROUTING_CONF_RPL_LITE
 #include "net/routing/rpl-lite/rpl.h"
+#include "net/routing/rpl-lite/rpl-timers.h"
 #elif ROUTING_CONF_RPL_CLASSIC
 #include "net/routing/rpl-classic/rpl.h"
 #include "net/routing/rpl-classic/rpl-private.h"
@@ -60,7 +61,9 @@ static
 PT_THREAD(cmd_attack(struct pt *pt, shell_output_func output, char *args))
 {
   PT_BEGIN(pt);
-  SHELL_OUTPUT(output, "should set node in attack mode (TBI)\n");
+  SHELL_OUTPUT(output, "SINK HOLE ATTACK!\n");
+  icmp6_stats_sink_hole = true;
+  rpl_timers_dio_reset("SINK HOLE ATTACK!");
   PT_END(pt);
 }
 /*---------------------------------------------------------------------------*/

