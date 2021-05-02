@@ -61,15 +61,26 @@ static
 PT_THREAD(cmd_attack(struct pt *pt, shell_output_func output, char *args))
 {
   PT_BEGIN(pt);
-  SHELL_OUTPUT(output, "SINK HOLE ATTACK!\n");
+  SHELL_OUTPUT(output, "SINK HOLE ATTACK IS STARTED!\n");
   icmp6_stats_sink_hole = true;
   icmp6_stats_drop_fwd_udp = true;
-  rpl_timers_dio_reset("SINK HOLE ATTACK!");
+  rpl_timers_dio_reset("SINK HOLE ATTACK IS STARTED!");
+  PT_END(pt);
+}
+static
+PT_THREAD(cmd_stop_attack(struct pt *pt, shell_output_func output, char *args))
+{
+  PT_BEGIN(pt);
+  SHELL_OUTPUT(output, "SINK HOLE ATTACK IS FINISHED!\n");
+  icmp6_stats_sink_hole = false;
+  icmp6_stats_drop_fwd_udp = false;
+  rpl_timers_dio_reset("SINK HOLE ATTACK IS FINISHED!");
   PT_END(pt);
 }
 /*---------------------------------------------------------------------------*/
 static const struct shell_command_t client_commands[] = {
   { "attack", cmd_attack, "'> attack': Sets the node in attack mode." },
+  { "stop-attack", cmd_stop_attack, "'> attack': Sets the node in non-attack mode." },  
   { NULL, NULL, NULL },
 };
 /*---------------------------------------------------------------------------*/
