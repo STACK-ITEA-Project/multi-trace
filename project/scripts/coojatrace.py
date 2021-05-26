@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
 
 import argparse
+import gzip
+import os
 import re
 import sys
+import traceback
+
 from humanfriendly.tables import format_pretty_table
 
 
 def _read_log(filename, callback, max_errors=0):
     line_number = 0
     errors = 0
-    with open(filename, "r") as f:
+    if os.path.isfile(filename):
+        is_gzip = filename.endswith('.gz')
+    elif os.path.isfile(filename + '.gz'):
+        is_gzip = True
+        filename += '.gz'
+    else:
+        raise FileNotFoundError(f"Could not find the file '{filename}'")
+
+    with gzip.open(filename, "rt") if is_gzip else open(filename, "r") as f:
         for line in f.readlines():
             line = line.strip()
             line_number += 1
             # Ignore comments for now
-            if not line.startswith("#"):
+            if not line.startswith('#'):
                 try:
                     callback(line)
                 except ParseException as e:
@@ -193,7 +205,7 @@ def main(parser=None):
     try:
         trace = CoojaTrace(conopts.input)
     except Exception as e:
-        print(e)
+        traceback.print_exc()
         sys.exit(f"Failed to parse Cooja traces: {conopts.input}")
     return trace
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+import gzip
+import os
 import xml.etree.ElementTree as ET
 
 
@@ -217,17 +218,26 @@ class Cooja:
     plugins = None
 
     def __init__(self, filename):
-        self._tree = ET.parse(filename)
-        self.root = self._tree.getroot()
-        if self.root.tag != 'simconf':
-            raise ET.ParseError('Not a Cooja simulation file')
-        s = self.root.find('simulation')
-        if s is None:
-            raise ET.ParseError('Not a Cooja simulation file')
-        self.sim = Simulation(s)
-        self.plugins = []
-        for p in self.root.iter('plugin'):
-            self.plugins.append(Plugin(p))
+        if os.path.isfile(filename):
+            is_gzip = filename.endswith('.gz')
+        elif os.path.isfile(filename + '.gz'):
+            is_gzip = True
+            filename += '.gz'
+        else:
+            raise FileNotFoundError(f"Could not find the file '{filename}'")
+
+        with gzip.open(filename, "rt") if is_gzip else open(filename, "r") as f:
+            self._tree = ET.parse(f)
+            self.root = self._tree.getroot()
+            if self.root.tag != 'simconf':
+                raise ET.ParseError('Not a Cooja simulation file')
+            s = self.root.find('simulation')
+            if s is None:
+                raise ET.ParseError('Not a Cooja simulation file')
+            self.sim = Simulation(s)
+            self.plugins = []
+            for p in self.root.iter('plugin'):
+                self.plugins.append(Plugin(p))
 
     def save(self, filename):
         self._tree.write(filename, encoding='utf-8', xml_declaration=True)
