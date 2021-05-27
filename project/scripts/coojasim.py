@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import gzip
-import os
+
 import xml.etree.ElementTree as ET
+
+import coojautils
 
 
 class ConfigBase:
@@ -218,15 +219,7 @@ class Cooja:
     plugins = None
 
     def __init__(self, filename):
-        if os.path.isfile(filename):
-            is_gzip = filename.endswith('.gz')
-        elif os.path.isfile(filename + '.gz'):
-            is_gzip = True
-            filename += '.gz'
-        else:
-            raise FileNotFoundError(f"Could not find the file '{filename}'")
-
-        with gzip.open(filename, "rt") if is_gzip else open(filename, "r") as f:
+        with coojautils.LogReader(filename) as f:
             self._tree = ET.parse(f)
             self.root = self._tree.getroot()
             if self.root.tag != 'simconf':
@@ -240,4 +233,6 @@ class Cooja:
                 self.plugins.append(Plugin(p))
 
     def save(self, filename):
-        self._tree.write(filename, encoding='utf-8', xml_declaration=True)
+        # XML needs to be written via binary file stream
+        with coojautils.LogWriter(filename, mode='wb') as f:
+            self._tree.write(f, encoding='utf-8', xml_declaration=True)

@@ -1,58 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
-import gzip
-import os
 import re
 import sys
 import traceback
 
 from humanfriendly.tables import format_pretty_table
 
-
-def _read_log(filename, callback, max_errors=0):
-    line_number = 0
-    errors = 0
-    if os.path.isfile(filename):
-        is_gzip = filename.endswith('.gz')
-    elif os.path.isfile(filename + '.gz'):
-        is_gzip = True
-        filename += '.gz'
-    else:
-        raise FileNotFoundError(f"Could not find the file '{filename}'")
-
-    with gzip.open(filename, "rt") if is_gzip else open(filename, "r") as f:
-        for line in f.readlines():
-            line = line.strip()
-            line_number += 1
-            # Ignore comments for now
-            if not line.startswith('#'):
-                try:
-                    callback(line)
-                except ParseException as e:
-                    e.line = line
-                    e.line_number = line_number
-                    e.filename = filename
-                    if errors < max_errors:
-                        print(e, file=sys.stderr)
-                        errors += 1
-                    else:
-                        raise e
-
-
-class ParseException(Exception):
-    line = ''
-    line_number = 0
-    filename = ''
-
-    def __init__(self, message):
-        self.message = message
-        super().__init__(message)
-
-    def __str__(self):
-        if self.filename:
-            return f'{self.message} at {self.filename}:{self.line_number}: "{self.line}"'
-        return str(self.message)
+import coojautils
 
 
 class Mote:
@@ -77,7 +32,7 @@ class Event:
     def __init__(self, line):
         data = line.split('\t', 2)
         if len(data) < 3:
-            raise ParseException("Failed to parse event data")
+            raise coojautils.ParseException("Failed to parse event data")
         self.time = int(data[0])
         self.event_type = data[1]
         self.description = data[2]
@@ -91,7 +46,7 @@ class MoteOutput:
     def __init__(self, line):
         data = line.split('\t', 2)
         if len(data) < 3:
-            raise ParseException("Failed to parse mote output")
+            raise coojautils.ParseException("Failed to parse mote output")
         self.time = int(data[0])
         self.mote_id = int(data[1])
         self.message = data[2]
@@ -110,7 +65,7 @@ class RadioTransmission:
     def __init__(self, line):
         data = line.split('\t', 7)
         if len(data) < 8:
-            raise ParseException("Failed to parse radio transmission")
+            raise coojautils.ParseException("Failed to parse radio transmission")
         self.time_start = int(data[0])
         self.time_end = int(data[1])
         self.radio_channel = int(data[2])
@@ -139,9 +94,9 @@ class CoojaTrace:
         self.data_trace_name = m.group(1)
         # radio_log = self.data_trace_name + '-radio-log.pcap'
 
-        _read_log(self.data_trace_name + '-event-output.log', self._process_events, max_errors=1)
-        _read_log(self.data_trace_name + '-mote-output.log', self._process_mote_output, max_errors=1)
-        _read_log(self.data_trace_name + '-radio-medium.log', self._process_radio_medium, max_errors=1)
+        coojautils.read_log(self.data_trace_name + '-event-output.log', self._process_events, max_errors=1)
+        coojautils.read_log(self.data_trace_name + '-mote-output.log', self._process_mote_output, max_errors=1)
+        coojautils.read_log(self.data_trace_name + '-radio-medium.log', self._process_radio_medium, max_errors=1)
 
         # Get address from 'Tentative link-local IPv6 address: fe80::222:22:22:22'
         p = re.compile(r'.*Tentative link-local IPv6 address: fe80(::[\d:a-f]+)$')
@@ -201,13 +156,11 @@ def main(parser=None):
         conopts = parser.parse_args(sys.argv[1:])
     except Exception as e:
         sys.exit(f"Illegal arguments: {str(e)}")
-    trace = None
     try:
-        trace = CoojaTrace(conopts.input)
-    except Exception as e:
+        return CoojaTrace(conopts.input)
+    except (OSError, IOError, coojautils.ParseException):
         traceback.print_exc()
         sys.exit(f"Failed to parse Cooja traces: {conopts.input}")
-    return trace
 
 
 if __name__ == '__main__':
