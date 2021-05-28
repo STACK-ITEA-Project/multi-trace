@@ -119,11 +119,28 @@ class CoojaTrace:
         self.add_mote(t.mote_id, t.time_start).transmissions.append(t)
         self.transmissions.append(t)
 
-    def get_mote_output(self, regex=None):
+    def get_events(self, event_type=None, description=None, start_time=None, end_time=None):
+        output = list(self.events)
+        if start_time is not None:
+            output = [v for v in output if v.time >= start_time]
+        if end_time is not None:
+            output = [v for v in output if v.time <= end_time]
+        if event_type:
+            output = [e for e in output if e.event_type == event_type]
+        if description:
+            output = [e for e in output if e.description == description]
+        return output
+
+    def get_mote_output(self, regex=None, start_time=None, end_time=None):
+        output = list(self.mote_output)
+        if start_time is not None:
+            output = [v for v in output if v.time >= start_time]
+        if end_time is not None:
+            output = [v for v in output if v.time <= end_time]
         if regex:
             p = re.compile(regex)
-            return [v for v in self.mote_output if p.match(v.message)]
-        return list(self.mote_output)
+            output = [v for v in output if p.match(v.message)]
+        return output
 
     def add_mote(self, mote_id, time):
         if mote_id in self.motes:
