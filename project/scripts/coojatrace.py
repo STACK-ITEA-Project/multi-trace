@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import re
 import sys
 import traceback
@@ -88,15 +89,23 @@ class CoojaTrace:
         self.events = []
         self.transmissions = []
 
-        m = re.match(r'(.+-dt-\d+)(-.+[.].+)?$', trace_name)
-        if not m:
-            sys.exit(f"File name not matching Cooja data trace: '{trace_name}'")
-        self.data_trace_name = m.group(1)
-        # radio_log = self.data_trace_name + '-radio-log.pcap'
-
-        coojautils.read_log(self.data_trace_name + '-event-output.log', self._process_events, max_errors=1)
-        coojautils.read_log(self.data_trace_name + '-mote-output.log', self._process_mote_output, max_errors=1)
-        coojautils.read_log(self.data_trace_name + '-radio-medium.log', self._process_radio_medium, max_errors=1)
+        if not os.path.isdir(trace_name):
+            m = re.match(r'(.+-dt-\d+)(-.+[.].+)?$', trace_name)
+            if not m:
+                sys.exit(f"File name not matching Cooja data trace: '{trace_name}'")
+            self.data_trace_name = m.group(1)
+            # radio_log = self.data_trace_name + '-radio-log.pcap'
+            coojautils.read_log(self.data_trace_name + '-event-output.log', self._process_events, max_errors=1)
+            coojautils.read_log(self.data_trace_name + '-mote-output.log', self._process_mote_output, max_errors=1)
+            coojautils.read_log(self.data_trace_name + '-radio-medium.log', self._process_radio_medium, max_errors=1)
+        else:
+            self.data_trace_name = trace_name
+            coojautils.read_log(os.path.join(self.data_trace_name, 'events.log'), self._process_events,
+                                max_errors=1)
+            coojautils.read_log(os.path.join(self.data_trace_name, 'mote-output.log'), self._process_mote_output,
+                                max_errors=1)
+            coojautils.read_log(os.path.join(self.data_trace_name, 'radio-medium.log'), self._process_radio_medium,
+                                max_errors=1)
 
         # Get address from 'Tentative link-local IPv6 address: fe80::222:22:22:22'
         p = re.compile(r'.*Tentative link-local IPv6 address: fe80(::[\d:a-f]+)$')
