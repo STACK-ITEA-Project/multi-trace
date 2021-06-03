@@ -57,6 +57,7 @@ def run_simulation(cooja_file, output_path=None):
     if output_path is not None:
         target_basename = os.path.join(output_path, target_basename)
     target_basename += '-dt-' + simulation_id
+    target_basename_fail = target_basename + '-fail'
     target_output = target_basename + '/cooja.testlog'
     target_log_output = target_basename + '/cooja.log'
 
@@ -70,20 +71,27 @@ def run_simulation(cooja_file, output_path=None):
     end_time = time.perf_counter_ns()
     with open(cooja_log, 'a') as f:
         f.write(f'\nSimulation execution time: {end_time - start_time} ns.\n')
-    if return_code != 0:
+
+    if not os.path.isdir(target_basename):
+        os.mkdir(target_basename)
+    has_cooja_output = os.path.isfile(cooja_output)
+    if has_cooja_output:
+        os.rename(cooja_output, target_output)
+    os.rename(cooja_log, target_log_output)
+
+    if return_code != 0 or not has_cooja_output:
         print(f"Failed, ret code={return_code}, output:", file=sys.stderr)
         print("-----", file=sys.stderr)
         print(output, file=sys.stderr, end='')
         print("-----", file=sys.stderr)
+        if not has_cooja_output:
+            print("No Cooja simulation script output!", file=sys.stderr)
+        os.rename(target_basename, target_basename_fail)
         return False
 
     print("  Checking for output...")
 
     is_done = False
-    if not os.path.isdir(target_basename):
-        os.mkdir(target_basename)
-    os.rename(cooja_output, target_output)
-    os.rename(cooja_log, target_log_output)
     with open(target_output, "r") as f:
         for line in f.readlines():
             line = line.strip()
@@ -93,6 +101,7 @@ def run_simulation(cooja_file, output_path=None):
 
     if not is_done:
         print("  test failed.")
+        os.rename(target_basename, target_basename_fail)
         return False
 
     print(f"  test done in {round((end_time - start_time) / 1000000)} milliseconds.")
