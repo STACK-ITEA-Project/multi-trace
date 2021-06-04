@@ -82,6 +82,7 @@ class CoojaTrace:
     events = None
     mote_output = None
     transmissions = None
+    _is_file_based = False
 
     def __init__(self, trace_name):
         self.motes = {}
@@ -94,6 +95,7 @@ class CoojaTrace:
             if not m:
                 sys.exit(f"File name not matching Cooja data trace: '{trace_name}'")
             self.data_trace_name = m.group(1)
+            self._is_file_based = True
             # radio_log = self.data_trace_name + '-radio-log.pcap'
             coojautils.read_log(self.data_trace_name + '-event-output.log', self._process_events, max_errors=1)
             coojautils.read_log(self.data_trace_name + '-mote-output.log', self._process_mote_output, max_errors=1)
@@ -127,6 +129,21 @@ class CoojaTrace:
         t = RadioTransmission(line)
         self.add_mote(t.mote_id, t.time_start).transmissions.append(t)
         self.transmissions.append(t)
+
+    def get_file_name(self, filename):
+        if self._is_file_based:
+            return self.data_trace_name + '-' + filename
+        else:
+            return os.path.join(self.data_trace_name, filename)
+
+    def is_file(self, filename):
+        return os.path.isfile(self.get_file_name(filename))
+
+    def get_log_writer(self, filename, is_binary=False, overwrite=False):
+        log_file = self.get_file_name(filename)
+        if not overwrite and os.path.exists(log_file):
+            raise FileExistsError(f'file "{log_file}" already exists')
+        return coojautils.LogWriter(log_file, mode='wb' if is_binary else 'wt')
 
     def get_events(self, event_type=None, description=None, start_time=None, end_time=None):
         output = list(self.events)
