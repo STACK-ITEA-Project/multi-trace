@@ -42,12 +42,36 @@
 #endif
 
 #include "sys/log.h"
-#define LOG_MODULE "ICMP6"
+#define LOG_MODULE "ICMP6-IDS"
 #define LOG_LEVEL LOG_LEVEL_INFO
 
 struct icmp6_stats icmp6_stats;
 bool icmp6_stats_sink_hole = false;
 bool icmp6_stats_drop_fwd_udp = false;
+/*---------------------------------------------------------------------------*/
+static bool
+is_parent(const uip_ipaddr_t *addr, uint8_t instance_id)
+{
+#if ROUTING_CONF_RPL_LITE
+  uip_ipaddr_t *parent;
+  parent = rpl_neighbor_get_ipaddr(curr_instance.dag.preferred_parent);
+  return parent != NULL && uip_ipaddr_cmp(addr, parent);
+#elif ROUTING_CONF_RPL_CLASSIC
+  rpl_instance_t *instance;
+  rpl_parent_t *parent;
+
+  instance = rpl_get_instance(instance_id);
+  if(instance == NULL) {
+    return false;
+  }
+  if(RPL_IS_STORING(instance)) {
+    return rpl_find_parent(instance->current_dag, addr) != NULL;
+  }
+#error Not yet implemented!
+#else /* Not RPL */
+  return true;
+#endif
+}
 /*---------------------------------------------------------------------------*/
 static const char *
 get_proto_as_string(uint8_t proto)
@@ -68,7 +92,7 @@ get_proto_as_string(uint8_t proto)
   }
 }
 /*---------------------------------------------------------------------------*/
-static void
+static enum netstack_ip_action
 process_dis_input(struct uip_icmp_hdr *hdr)
 {
   if(uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
@@ -78,11 +102,14 @@ process_dis_input(struct uip_icmp_hdr *hdr)
     /* Unicast */
     icmp6_stats.dis_uc_recv++;
   }
+  return NETSTACK_IP_PROCESS;
 }
 /*---------------------------------------------------------------------------*/
-static void
+static enum netstack_ip_action
 process_dio_input(struct uip_icmp_hdr *hdr)
 {
+  uint8_t *payload = (uint8_t *)(hdr + 1);
+
   if(uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
     /* Multicast */
     icmp6_stats.dio_mc_recv++;
@@ -90,18 +117,35 @@ process_dio_input(struct uip_icmp_hdr *hdr)
     /* Unicast */
     icmp6_stats.dio_uc_recv++;
   }
+
+  if(icmp6_stats_sink_hole) {
+    if(is_parent(&UIP_IP_BUF->srcipaddr, payload[0])) {
+      LOG_INFO("allowing DIO from parent ");
+      LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
+      LOG_INFO_("\n");
+    } else {
+      LOG_INFO("dropping DIO from ");
+      LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
+      LOG_INFO_("\n");
+      return NETSTACK_IP_DROP;
+    }
+  }
+
+  return NETSTACK_IP_PROCESS;
 }
 /*---------------------------------------------------------------------------*/
-static void
+static enum netstack_ip_action
 process_dao_input(struct uip_icmp_hdr *hdr)
 {
   icmp6_stats.dao_recv++;
+  return NETSTACK_IP_PROCESS;
 }
 /*---------------------------------------------------------------------------*/
-static void
+static enum netstack_ip_action
 process_dao_ack_input(struct uip_icmp_hdr *hdr)
 {
   /* Count DAO ack? */
+  return NETSTACK_IP_PROCESS;
 }
 /*---------------------------------------------------------------------------*/
 static enum netstack_ip_action
@@ -110,6 +154,7 @@ ip_input(void)
   struct uip_icmp_hdr *icmp_hdr;
   uint8_t *header;
   uint8_t proto;
+  enum netstack_ip_action action = NETSTACK_IP_PROCESS;
 
   header = uipbuf_get_last_header(uip_buf, uip_len, &proto);
   LOG_INFO("Incoming %s packet from ", get_proto_as_string(proto));
@@ -122,21 +167,21 @@ ip_input(void)
       icmp6_stats.rpl_total_recv++;
       switch(icmp_hdr->icode) {
       case RPL_CODE_DIS:
-        process_dis_input(icmp_hdr);
+        action = process_dis_input(icmp_hdr);
         break;
       case RPL_CODE_DIO:
-        process_dio_input(icmp_hdr);
+        action = process_dio_input(icmp_hdr);
         break;
       case RPL_CODE_DAO:
-        process_dao_input(icmp_hdr);
+        action = process_dao_input(icmp_hdr);
         break;
       case RPL_CODE_DAO_ACK:
-        process_dao_ack_input(icmp_hdr);
+        action = process_dao_ack_input(icmp_hdr);
         break;
       }
     }
   }
-  return NETSTACK_IP_PROCESS;
+  return action;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -167,10 +212,10 @@ process_dio_output(struct uip_icmp_hdr *hdr)
   if(icmp6_stats_sink_hole) {
     uint16_t new_rank = 128;
     payload = (uint8_t *)(hdr + 1);
-    printf("check DIO: i: %u ver: %u rank: %u => rank: %u\n",
-           payload[0], payload[1],
-           ((uint16_t)payload[2] << 8) + payload[3],
-           new_rank);
+    LOG_INFO("modified DIO: i: %u ver: %u rank: %u => rank: %u\n",
+             payload[0], payload[1],
+             ((uint16_t)payload[2] << 8) + payload[3],
+             new_rank);
     payload[2] = new_rank >> 8;
     payload[3] = new_rank & 0xff;
 
