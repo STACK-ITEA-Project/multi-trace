@@ -137,7 +137,25 @@ process_dio_input(struct uip_icmp_hdr *hdr)
 static enum netstack_ip_action
 process_dao_input(struct uip_icmp_hdr *hdr)
 {
+  uint8_t *payload = (uint8_t *)(hdr + 1);
+
   icmp6_stats.dao_recv++;
+
+#if ROUTING_CONF_RPL_LITE
+  if(icmp6_stats_sink_hole) {
+    uint8_t flags = payload[1];
+    uint8_t sequence = payload[3];
+    if(flags & RPL_DAO_K_FLAG) {
+      /* Node requests a DAO ACK */
+      LOG_INFO("sending fake DAO ACK to ");
+      LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
+      LOG_INFO_("\n");
+      rpl_timers_schedule_dao_ack(&UIP_IP_BUF->srcipaddr, sequence);
+    }
+    return NETSTACK_IP_DROP;
+  }
+#endif /* ROUTING_CONF_RPL_LITE */
+
   return NETSTACK_IP_PROCESS;
 }
 /*---------------------------------------------------------------------------*/
@@ -212,7 +230,7 @@ process_dio_output(struct uip_icmp_hdr *hdr)
   if(icmp6_stats_sink_hole) {
     uint16_t new_rank = 128;
     payload = (uint8_t *)(hdr + 1);
-    LOG_INFO("modified DIO: i: %u ver: %u rank: %u => rank: %u\n",
+    LOG_INFO("sending fake DIO: i: %u ver: %u rank: %u => rank: %u\n",
              payload[0], payload[1],
              ((uint16_t)payload[2] << 8) + payload[3],
              new_rank);
