@@ -15,6 +15,7 @@
 #include "net/routing/rpl-classic/rpl.h"
 #include "net/routing/rpl-classic/rpl-private.h"
 #endif
+#include <inttypes.h>
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -47,7 +48,7 @@ udp_rx_callback(struct simple_udp_connection *c,
   if(datalen != sizeof(app_message_t)) {
     LOG_INFO_("unknown data of size %u from ", datalen);
   } else {
-    LOG_INFO_("response %u from ", app_read_uint32(msg->seqno));
+    LOG_INFO_("response %"PRIu32" from ", app_read_uint32(msg->seqno));
   }
   LOG_INFO_6ADDR(sender_addr);
 #if LLSEC802154_CONF_ENABLED
@@ -80,7 +81,7 @@ PT_THREAD(cmd_stop_attack(struct pt *pt, shell_output_func output, char *args))
 /*---------------------------------------------------------------------------*/
 static const struct shell_command_t client_commands[] = {
   { "attack", cmd_attack, "'> attack': Sets the node in attack mode." },
-  { "stop-attack", cmd_stop_attack, "'> attack': Sets the node in non-attack mode." },  
+  { "stop-attack", cmd_stop_attack, "'> attack': Sets the node in non-attack mode." },
   { NULL, NULL, NULL },
 };
 /*---------------------------------------------------------------------------*/
@@ -124,7 +125,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
     if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
       /* Send to DAG root */
-      LOG_INFO("Sending request %u to ", count);
+      LOG_INFO("Sending request %"PRIu32" to ", count);
       LOG_INFO_6ADDR(&dest_ipaddr);
       LOG_INFO_("\n");
       memset(&msg, 0, sizeof(msg));

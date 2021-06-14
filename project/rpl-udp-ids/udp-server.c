@@ -33,6 +33,7 @@
 #include "net/ipv6/simple-udp.h"
 #include "app-message.h"
 #include "icmp6-stats.h"
+#include <inttypes.h>
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -61,7 +62,7 @@ udp_rx_callback(struct simple_udp_connection *c,
   if(datalen != sizeof(app_message_t)) {
     LOG_INFO_("unknown data of size %u from ", datalen);
   } else {
-    LOG_INFO_(" message %u (rank %u) from ",
+    LOG_INFO_(" message %"PRIu32" (rank %u) from ",
               app_read_uint32(msg->seqno),
               app_read_uint16(msg->rpl_rank));
   }
