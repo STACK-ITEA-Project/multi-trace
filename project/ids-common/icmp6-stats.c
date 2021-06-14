@@ -45,6 +45,9 @@
 #define LOG_MODULE "ICMP6-IDS"
 #define LOG_LEVEL LOG_LEVEL_INFO
 
+#define ATTACK_DROP_DIO 1
+#define ATTACK_FAKE_DAO 1
+
 struct icmp6_stats icmp6_stats;
 bool icmp6_stats_sink_hole = false;
 bool icmp6_stats_drop_fwd_udp = false;
@@ -108,8 +111,6 @@ process_dis_input(struct uip_icmp_hdr *hdr)
 static enum netstack_ip_action
 process_dio_input(struct uip_icmp_hdr *hdr)
 {
-  uint8_t *payload = (uint8_t *)(hdr + 1);
-
   if(uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
     /* Multicast */
     icmp6_stats.dio_mc_recv++;
@@ -118,7 +119,9 @@ process_dio_input(struct uip_icmp_hdr *hdr)
     icmp6_stats.dio_uc_recv++;
   }
 
+#if ATTACK_DROP_DIO
   if(icmp6_stats_sink_hole) {
+    uint8_t *payload = (uint8_t *)(hdr + 1);
     if(is_parent(&UIP_IP_BUF->srcipaddr, payload[0])) {
       LOG_INFO("allowing DIO from parent ");
       LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
@@ -130,6 +133,7 @@ process_dio_input(struct uip_icmp_hdr *hdr)
       return NETSTACK_IP_DROP;
     }
   }
+#endif /* ATTACK_DROP_DIO */
 
   return NETSTACK_IP_PROCESS;
 }
@@ -137,12 +141,12 @@ process_dio_input(struct uip_icmp_hdr *hdr)
 static enum netstack_ip_action
 process_dao_input(struct uip_icmp_hdr *hdr)
 {
-  uint8_t *payload = (uint8_t *)(hdr + 1);
-
   icmp6_stats.dao_recv++;
 
+#if ATTACK_FAKE_DAO
 #if ROUTING_CONF_RPL_LITE
   if(icmp6_stats_sink_hole) {
+    uint8_t *payload = (uint8_t *)(hdr + 1);
     uint8_t flags = payload[1];
     uint8_t sequence = payload[3];
     if(flags & RPL_DAO_K_FLAG) {
@@ -155,6 +159,7 @@ process_dao_input(struct uip_icmp_hdr *hdr)
     return NETSTACK_IP_DROP;
   }
 #endif /* ROUTING_CONF_RPL_LITE */
+#endif /* ATTACK_FAKE_DAO */
 
   return NETSTACK_IP_PROCESS;
 }
