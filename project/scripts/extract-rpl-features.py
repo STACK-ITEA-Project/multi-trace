@@ -21,9 +21,6 @@ def write_csv(trace, csv_file, columns, data):
 def main():
     trace = coojatrace.main()
 
-    # Show summary
-    # trace.print_summary()
-
     network_events = trace.get_events(event_type='network', description='steady-state')
     network_stable_time = network_events[0].time if network_events else 0
 
@@ -50,6 +47,8 @@ def main():
     column_names = ['Time', 'Mote', 'Seq', 'Rank', 'Version', 'DIS-R', 'DIS-S', 'DIO-R', 'DIO-S',
                     'DAO-R', 'RPL-total-sent']
     print(format_pretty_table(data[:20], column_names))
+    if len(data) > 20:
+        print(f"Only showing 20 first rows - remaining {len(data) - 20} rows not shown.")
 
     # Save statistics to CSV file
     write_csv(trace, 'rpl-statistics.csv', column_names, data)

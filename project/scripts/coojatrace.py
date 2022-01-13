@@ -187,6 +187,7 @@ class CoojaTrace:
         columns = ['Time', 'Event', 'Description']
         print(format_pretty_table(data, columns))
         data = list(map(lambda e: [e.mote_id, e.address, len(e.output), len(e.transmissions)], self.motes.values()))
+        data.sort(key=lambda d: d[1])
         columns = ['Mote', 'Address', 'Log Outputs', 'Transmissions']
         print(format_pretty_table(data, columns))
 
@@ -194,13 +195,17 @@ class CoojaTrace:
 def main(parser=None):
     if not parser:
         parser = argparse.ArgumentParser()
+    parser.add_argument('-s', action='store_true', dest='summary', default=False)
     parser.add_argument('input')
     try:
         conopts = parser.parse_args(sys.argv[1:])
     except Exception as e:
         sys.exit(f"Illegal arguments: {str(e)}")
     try:
-        return CoojaTrace(conopts.input)
+        trace = CoojaTrace(conopts.input)
+        if conopts.summary:
+            trace.print_summary()
+        return trace
     except (OSError, IOError, coojautils.ParseException):
         traceback.print_exc()
         sys.exit(f"Failed to parse Cooja traces: {conopts.input}")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ElementTree
 
 import coojautils
 
@@ -12,7 +12,7 @@ class ConfigBase:
         self._element = e
 
     def add(self, name):
-        c = ET.Element(name)
+        c = ElementTree.Element(name)
         self._element.append(c)
         return c
 
@@ -55,6 +55,37 @@ class ConfigBase:
 
     def set_float(self, name, v, create=True):
         return self.set_str(name, v, create)
+
+    def get_bool(self, name, default=None):
+        if default is not None:
+            default = 'true' if default else 'false'
+        v = self.get_str(name, default)
+        return None if v is None else v == 'true'
+
+    def set_bool(self, name, v, create=True):
+        v = 'true' if v else 'false'
+        return self.set_str(name, v, create)
+
+
+class RandomSeed(ConfigBase):
+
+    _NAME = 'randomseed'
+
+    def __init__(self, e):
+        super().__init__(e)
+
+    def is_generated(self):
+        return self.get_str(self._NAME) == 'generated'
+
+    def set_generated(self):
+        self.set_str(self._NAME, 'generated')
+
+    def get_seed(self):
+        text = self.get_str(self._NAME)
+        return None if text is None or text == 'generated' else int(text)
+
+    def set_seed(self, seed):
+        self.set_str(self._NAME, seed)
 
 
 class RadioMedium(ConfigBase):
@@ -183,9 +214,12 @@ class Simulation(ConfigBase):
     radio_medium = None
     motes = None
     motetypes = None
+    random_seed = None
 
     def __init__(self, e):
         super().__init__(e)
+        self.random_seed = RandomSeed(e)
+
         r = e.find('radiomedium')
         if r is not None:
             if r.text and r.text.strip() == 'org.contikios.cooja.radiomediums.UDGM':
@@ -220,13 +254,13 @@ class Cooja:
 
     def __init__(self, filename):
         with coojautils.LogReader(filename) as f:
-            self._tree = ET.parse(f)
+            self._tree = ElementTree.parse(f)
             self.root = self._tree.getroot()
             if self.root.tag != 'simconf':
-                raise ET.ParseError('Not a Cooja simulation file')
+                raise ElementTree.ParseError('Not a Cooja simulation file')
             s = self.root.find('simulation')
             if s is None:
-                raise ET.ParseError('Not a Cooja simulation file')
+                raise ElementTree.ParseError('Not a Cooja simulation file')
             self.sim = Simulation(s)
             self.plugins = []
             for p in self.root.iter('plugin'):
