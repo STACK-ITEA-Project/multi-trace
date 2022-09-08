@@ -259,8 +259,8 @@
   <plugin>
     org.contikios.cooja.plugins.ScriptRunner
     <plugin_config>
-      <script>var senders = {};
-var success = false;
+      <script>success = false;
+var senders = {};
 var waiting_for_stable_network = true;
 // Number of clients (the sink excluded)
 var clients = sim.getMotesCount() - 1;
