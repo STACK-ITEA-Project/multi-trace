@@ -1,3 +1,6 @@
 [submodule "tools/contiki-ng"]
 	path = tools/contiki-ng
 	url = https://github.com/contiki-ng/contiki-ng.git
+[submodule "tools/cooja"]
+	path = tools/cooja
+	url = https://github.com/STACK-ITEA-Project/multi-trace-cooja.git
