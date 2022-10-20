@@ -298,7 +298,7 @@
   <plugin>
     org.contikios.cooja.plugins.LogListener
     <plugin_config>
-      <filter>App</filter>
+      <filter>(App|ATTACK)</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
@@ -344,7 +344,7 @@ function setBool(mote, name, value) {
     log.log("Set bool " + name + " (address 0x" + java.lang.Long.toHexString(symbol.addr)
             + " size " + symbol.size + ") to " + value + "\n");
   }
-  var size = (symbol.size &amp;&amp; symbol.size > 0) ? symbol.size : 1;
+  var size = (symbol.size &amp;&amp; symbol.size &gt; 0) ? symbol.size : 1;
   var segment = mem.getMemorySegment(symbol.addr, size);
   segment[size - 1] = value ? 1 : 0;
   mem.setMemorySegment(symbol.addr, segment);
