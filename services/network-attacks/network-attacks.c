@@ -180,9 +180,9 @@ ip_input(void)
   enum netstack_ip_action action = NETSTACK_IP_PROCESS;
 
   header = uipbuf_get_last_header(uip_buf, uip_len, &proto);
-  LOG_INFO("Incoming %s packet from ", get_proto_as_string(proto));
-  LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
-  LOG_INFO_("\n");
+  LOG_DBG("Incoming %s packet from ", get_proto_as_string(proto));
+  LOG_DBG_6ADDR(&UIP_IP_BUF->srcipaddr);
+  LOG_DBG_("\n");
   if(proto == UIP_PROTO_ICMP6 && header != NULL) {
     icmp_hdr = (struct uip_icmp_hdr *)header;
     if(icmp_hdr->type == ICMP6_RPL) {
@@ -262,14 +262,14 @@ ip_output(const linkaddr_t *localdest)
 
   header = uipbuf_get_last_header(uip_buf, uip_len, &proto);
   is_from_me = uip_ds6_is_my_addr(&UIP_IP_BUF->srcipaddr);
-  LOG_INFO("%s %s packet to ", is_from_me ? "Outgoing" : "Forwarding",
+  LOG_DBG("%s %s packet to ", is_from_me ? "Outgoing" : "Forwarding",
            get_proto_as_string(proto));
-  LOG_INFO_6ADDR(&UIP_IP_BUF->destipaddr);
+  LOG_DBG_6ADDR(&UIP_IP_BUF->destipaddr);
   if(!is_from_me) {
-    LOG_INFO_(" from ");
-    LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
+    LOG_DBG_(" from ");
+    LOG_DBG_6ADDR(&UIP_IP_BUF->srcipaddr);
   }
-  LOG_INFO_("\n");
+  LOG_DBG_("\n");
   if(is_from_me && proto == UIP_PROTO_ICMP6 && header != NULL) {
     icmp_hdr = (struct uip_icmp_hdr *)header;
     if(icmp_hdr->type == ICMP6_RPL) {
