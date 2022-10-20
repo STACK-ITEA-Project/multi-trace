@@ -275,9 +275,9 @@
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>302</width>
-    <z>2</z>
+    <z>0</z>
     <height>157</height>
-    <location_x>3</location_x>
+    <location_x>310</location_x>
     <location_y>0</location_y>
   </plugin>
   <plugin>
@@ -290,10 +290,10 @@
       <viewport>1.68758401899377 0.0 0.0 1.68758401899377 -43.185404471347574 22.822079273955353</viewport>
     </plugin_config>
     <width>306</width>
-    <z>4</z>
+    <z>1</z>
     <height>328</height>
-    <location_x>3</location_x>
-    <location_y>158</location_y>
+    <location_x>1</location_x>
+    <location_y>0</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.LogListener
@@ -302,24 +302,11 @@
       <formatted_time />
       <coloring />
     </plugin_config>
-    <width>519</width>
-    <z>1</z>
-    <height>487</height>
-    <location_x>304</location_x>
-    <location_y>-1</location_y>
-  </plugin>
-  <plugin>
-    org.contikios.cooja.plugins.RadioLogger
-    <plugin_config>
-      <split>260</split>
-      <formatted_time />
-      <analyzers name="6lowpan" />
-    </plugin_config>
-    <width>500</width>
-    <z>3</z>
-    <height>488</height>
-    <location_x>823</location_x>
-    <location_y>-2</location_y>
+    <width>893</width>
+    <z>2</z>
+    <height>470</height>
+    <location_x>0</location_x>
+    <location_y>326</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.ScriptRunner
@@ -338,16 +325,34 @@ var attackerId = 2 + r.nextInt(clients);
 TIMEOUT(4000000, if(success) { log.testOK(); });
 
 function setBool(mote, name, value) {
-  var mem = mote.getMemory();
-  var symbol = mem.getSymbolMap().get(name);
-  if (verbose) {
-    log.log("Set bool " + name + " (address 0x" + java.lang.Long.toHexString(symbol.addr)
-            + " size " + symbol.size + ") to " + value + "\n");
+  var mem = new org.contikios.cooja.mote.memory.VarMemory(mote.getMemory());
+  if (!mem.variableExists(name)) {
+    log.log("ERR: could not find variable '" + name + "'\n");
+    return false;
   }
-  var size = (symbol.size &amp;&amp; symbol.size &gt; 0) ? symbol.size : 1;
-  var segment = mem.getMemorySegment(symbol.addr, size);
-  segment[size - 1] = value ? 1 : 0;
-  mem.setMemorySegment(symbol.addr, segment);
+  var symbol = mem.getVariable(name);
+  if (verbose) {
+    var oldValue = mem.getInt8ValueOf(symbol.addr) ? "true" : "false";
+    log.log("Set bool " + name + " (address 0x" + java.lang.Long.toHexString(symbol.addr)
+            + "/" + symbol.size + ": " + oldValue + ") to " + value + "\n");
+  }
+  mem.setInt8ValueOf(symbol.addr, value);
+  return true;
+}
+
+function setInt16(mote, name, value) {
+  var mem = new org.contikios.cooja.mote.memory.VarMemory(mote.getMemory());
+  if (!mem.variableExists(name)) {
+    log.log("ERR: could not find variable '" + name + "'\n");
+    return false;
+  }
+  var symbol = mem.getVariable(name);
+  if (verbose) {
+    var oldValue = mem.getInt16ValueOf(symbol.addr) &amp; 0xffff;
+    log.log("Set int16 " + name + " (address 0x" + java.lang.Long.toHexString(symbol.addr)
+            + "/" + symbol.size + ": " + oldValue + ") to " + value + "\n");
+  }
+  mem.setInt16ValueOf(symbol.addr, value);
   return true;
 }
 
@@ -380,7 +385,11 @@ var attacker = sim.getMoteWithID(attackerId);
 log.log("network blackkhole attack from " + attacker.getID() + "!\n");
 sim.getEventCentral().logEvent("attack", "blackhole:" + attacker.getID());
 
-setBool(attacker, 'network_attacks_sink_hole', true);
+/* Configure black hole attack */
+setInt16(attacker, 'network_attacks_rpl_dio_fake_rank', 256);
+setBool(attacker, 'network_attacks_rpl_dio_only_parent', true);
+setBool(attacker, 'network_attacks_rpl_dao_fake_accept', true);
+setBool(attacker, 'network_attacks_udp_drop_fwd', true);
 
 success = true;
 
@@ -391,10 +400,10 @@ log.testOK();</script>
       <active>true</active>
     </plugin_config>
     <width>600</width>
-    <z>0</z>
+    <z>3</z>
     <height>642</height>
-    <location_x>902</location_x>
-    <location_y>53</location_y>
+    <location_x>900</location_x>
+    <location_y>0</location_y>
   </plugin>
 </simconf>
 

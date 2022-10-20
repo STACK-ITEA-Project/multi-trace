@@ -33,10 +33,15 @@
 
 #include "contiki.h"
 
-extern bool network_attacks_sink_hole;
-extern bool network_attacks_sink_hole_fake_dao;
-extern bool network_attacks_drop_fwd_udp;
-extern uint16_t network_attacks_fake_rank;
+extern uint16_t network_attacks_rpl_dio_fake_rank;
+
+extern bool network_attacks_rpl_dio_only_parent;
+extern bool network_attacks_rpl_dao_fake_accept;
+
+extern bool network_attacks_udp_drop_fwd;
+extern bool network_attacks_udp_drop;
+
+extern uint16_t network_attacks_fake_id;
 
 void network_attacks_init(void);
 
