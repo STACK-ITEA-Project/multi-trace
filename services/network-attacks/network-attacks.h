@@ -38,6 +38,9 @@ extern uint16_t network_attacks_rpl_dio_fake_rank;
 extern bool network_attacks_rpl_dio_only_parent;
 extern bool network_attacks_rpl_dao_fake_accept;
 
+extern bool network_attacks_rpl_dfa;
+extern uint32_t network_attacks_rpl_dfa_period;
+
 extern bool network_attacks_udp_drop_fwd;
 extern bool network_attacks_udp_drop;
 
