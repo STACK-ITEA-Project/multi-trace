@@ -71,6 +71,19 @@
  *   network_attacks_rpl_dio_random_rank = true
  *   network_attacks_rpl_dio_reset = true
  *
+ * Configuration for local repair:
+ *   network_attacks_rpl_dio_fake_rank = 65535
+ *   network_attacks_rpl_dio_reset = true
+ * Plus send DIO every 10 second by setting this every 10 second:
+ *   network_attacks_rpl_dio_send = true
+ *
+ * Configuration for RPL version attack (set periodically):
+ *   network_attacks_rpl_dag_version_bump = true
+ *
+ * Configuration for DIS flooding:
+ *   network_attacks_rpl_dfa = true
+ *   network_attacks_rpl_dfa_period = 1000
+ *
  * Send multicast DIO once immediately:
  *   network_attacks_rpl_dio_send = true
  * Send multicast DIS once immediately:
