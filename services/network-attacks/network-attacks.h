@@ -33,7 +33,15 @@
 
 #include "contiki.h"
 
+extern bool network_attacks_rpl_dio_send;
+extern bool network_attacks_rpl_dis_send;
+extern bool network_attacks_rpl_dio_reset;
+
+extern bool network_attacks_rpl_dag_version_bump;
+
 extern uint16_t network_attacks_rpl_dio_fake_rank;
+
+extern bool network_attacks_rpl_dio_random_rank;
 
 extern bool network_attacks_rpl_dio_only_parent;
 extern bool network_attacks_rpl_dao_fake_accept;
