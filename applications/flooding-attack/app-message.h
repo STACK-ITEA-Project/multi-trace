@@ -28,34 +28,71 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ICMP6_STATS_H_
-#define ICMP6_STATS_H_
+#ifndef APP_MESSAGE_H_
+#define APP_MESSAGE_H_
 
 #include "contiki.h"
 
-struct icmp6_stats {
-  uint32_t dis_uc_recv;
-  uint32_t dis_mc_recv;
-  uint32_t dis_uc_sent;
-  uint32_t dis_mc_sent;
-  uint32_t dio_uc_recv;
-  uint32_t dio_mc_recv;
-  uint32_t dio_uc_sent;
-  uint32_t dio_mc_sent;
-  uint32_t dao_recv;
-  uint32_t dao_sent;
+typedef struct {
+  uint8_t seqno[4];
+  uint8_t rpl_rank[2];
+} app_message_t;
 
-  uint32_t dao_ack_recv;
-  uint32_t dao_ack_sent;
-  uint32_t rpl_total_sent;
-  uint32_t rpl_total_recv;
-  uint32_t total_sent;
-  uint32_t total_recv;
-};
+static inline uint16_t
+app_read_uint16(const uint8_t *p)
+{
+  return ((uint16_t)p[0] << 8) | (uint16_t)p[1];
+}
 
-extern struct icmp6_stats icmp6_stats;
-extern bool flooding_attack_drop_dio;
+static inline void
+app_write_uint16(uint8_t *p, uint16_t v)
+{
+  p[0] = (v >> 8) & 0xff;
+  p[1] = v & 0xff;
+}
 
-void icmp6_stats_init(void);
+static inline uint32_t
+app_read_uint32(const uint8_t *p)
+{
+  return ((uint32_t)p[0] << 24)
+    | ((uint32_t)p[1] << 16)
+    | ((uint32_t)p[2] << 8)
+    | (uint32_t)p[3];
+}
 
-#endif /* ICMP6_STATS_H_ */
+static inline void
+app_write_uint32(uint8_t *p, uint32_t v)
+{
+  p[0] = (v >> 24) & 0xff;
+  p[1] = (v >> 16) & 0xff;
+  p[2] = (v >> 8) & 0xff;
+  p[3] = v & 0xff;
+}
+
+static inline uint64_t
+app_read_uint64(const uint8_t *p)
+{
+  return ((uint64_t)p[0] << 56)
+    | ((uint64_t)p[1] << 48)
+    | ((uint64_t)p[2] << 40)
+    | ((uint64_t)p[3] << 32)
+    | ((uint64_t)p[4] << 24)
+    | ((uint64_t)p[5] << 16)
+    | ((uint64_t)p[6] << 8)
+    | (uint64_t)p[7];
+}
+
+static inline void
+app_write_uint64(uint8_t *p, uint64_t v)
+{
+  p[0] = (v >> 56) & 0xff;
+  p[1] = (v >> 48) & 0xff;
+  p[2] = (v >> 40) & 0xff;
+  p[3] = (v >> 32) & 0xff;
+  p[4] = (v >> 24) & 0xff;
+  p[5] = (v >> 16) & 0xff;
+  p[6] = (v >> 8) & 0xff;
+  p[7] = (v >> 0) & 0xff;
+}
+
+#endif /* APP_MESSAGE_H_ */

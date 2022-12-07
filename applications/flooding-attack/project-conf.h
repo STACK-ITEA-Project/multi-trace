@@ -28,34 +28,10 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ICMP6_STATS_H_
-#define ICMP6_STATS_H_
+#ifndef PROJECT_CONF_H_
+#define PROJECT_CONF_H_
 
-#include "contiki.h"
+#define ENERGEST_CONF_ON 1
+#define LOG_CONF_WITH_ANNOTATE 1
 
-struct icmp6_stats {
-  uint32_t dis_uc_recv;
-  uint32_t dis_mc_recv;
-  uint32_t dis_uc_sent;
-  uint32_t dis_mc_sent;
-  uint32_t dio_uc_recv;
-  uint32_t dio_mc_recv;
-  uint32_t dio_uc_sent;
-  uint32_t dio_mc_sent;
-  uint32_t dao_recv;
-  uint32_t dao_sent;
-
-  uint32_t dao_ack_recv;
-  uint32_t dao_ack_sent;
-  uint32_t rpl_total_sent;
-  uint32_t rpl_total_recv;
-  uint32_t total_sent;
-  uint32_t total_recv;
-};
-
-extern struct icmp6_stats icmp6_stats;
-extern bool flooding_attack_drop_dio;
-
-void icmp6_stats_init(void);
-
-#endif /* ICMP6_STATS_H_ */
+#endif /* PROJECT_CONF_H_ */
