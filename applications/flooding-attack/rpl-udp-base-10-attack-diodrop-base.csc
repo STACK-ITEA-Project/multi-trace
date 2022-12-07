@@ -24,7 +24,7 @@
       org.contikios.cooja.contikimote.ContikiMoteType
       <identifier>mtype463</identifier>
       <description>Cooja Mote Type #1</description>
-      <source>[CONTIKI_DIR]/project/rpl-udp-ids-flooding/udp-server.c</source>
+      <source>[CONFIG_DIR]/../udp-server.c</source>
       <commands>make udp-server.cooja TARGET=cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
@@ -47,7 +47,7 @@
       org.contikios.cooja.contikimote.ContikiMoteType
       <identifier>mtype385</identifier>
       <description>Cooja Mote Type #2</description>
-      <source>[CONTIKI_DIR]/project/rpl-udp-ids-flooding/udp-client.c</source>
+      <source>[CONFIG_DIR]/../udp-client.c</source>
       <commands>make udp-client.cooja TARGET=cooja</commands>
       <moteinterface>org.contikios.cooja.interfaces.Position</moteinterface>
       <moteinterface>org.contikios.cooja.interfaces.Battery</moteinterface>
