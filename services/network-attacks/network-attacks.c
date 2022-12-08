@@ -62,6 +62,8 @@
  *   network_attacks_udp_drop_fwd = true
  * (b) Drop ALL application (UDP) packets (including from this node)
  *   network_attacks_udp_drop = true
+ * (c) Drop application with a rate of 50%. One of (a) and (b) plus following:
+ *   network_attacks_udp_drop_rate = 50
  *
  * Configuration for fake rank:
  *   network_attacks_rpl_dio_fake_rank = 256
@@ -132,6 +134,14 @@ bool network_attacks_udp_drop_fwd = false;
  * UDP, routing control packets via ICMP6.
  */
 bool network_attacks_udp_drop = false;
+
+/*
+ * Drop rate for outgoing UDP packets in percent. 0 means no UDP
+ * packets are dropped, 100 means all UDP packets dropped. Only active
+ * in combination with network_attacks_udp_drop or
+ * network_attacks_udp_drop_fwd.
+ */
+uint8_t network_attacks_udp_drop_rate = 100;
 
 /*
  * Send fake rate in DIO packets when different from 0.
@@ -517,8 +527,17 @@ ip_output(const linkaddr_t *localdest)
     return NETSTACK_IP_DROP;
   }
 
-  if(network_attacks_udp_drop_fwd && !is_from_me && proto == UIP_PROTO_UDP) {
-    LOG_INFO("Dropping UDP forwarded from ");
+  if(proto == UIP_PROTO_UDP &&
+     (network_attacks_udp_drop ||
+      (network_attacks_udp_drop_fwd && !is_from_me)) &&
+     (network_attacks_udp_drop_rate >= 100 ||
+      (random_rand() % 100) < network_attacks_udp_drop_rate)) {
+
+    if(network_attacks_udp_drop) {
+      LOG_INFO("Dropping UDP from ");
+    } else {
+      LOG_INFO("Dropping UDP forwarded from ");
+    }
     LOG_INFO_6ADDR(&UIP_IP_BUF->srcipaddr);
     LOG_INFO_("\n");
     return NETSTACK_IP_DROP;

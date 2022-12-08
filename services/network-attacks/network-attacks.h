@@ -51,6 +51,7 @@ extern uint32_t network_attacks_rpl_dfa_period;
 
 extern bool network_attacks_udp_drop_fwd;
 extern bool network_attacks_udp_drop;
+extern uint8_t network_attacks_udp_drop_rate;
 
 extern uint16_t network_attacks_fake_id;
 
