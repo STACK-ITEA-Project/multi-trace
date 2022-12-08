@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simconf>
   <simulation>
-    <title>STACK RPL-UDP-IDS Example Random Blackhole Attack</title>
+    <title>STACK RPL-UDP-IDS Example Selective Forwarding Random Attack</title>
     <randomseed>123457</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -360,22 +360,9 @@ function setInt16(mote, name, value) {
 }
 
 function selectAttacker() {
-  var sink = sim.getMoteWithID(sinkId);
-  var sinkRadio = sink.getInterfaces().getRadio();
-  while (true) {
-    var attackerId = 2 + r.nextInt(clients);
-    log.log("Checking potential attacker " + attackerId + "... ");
-
-    var attacker = sim.getMoteWithID(attackerId);
-    var attackerRadio = attacker.getInterfaces().getRadio();
-    var neighbours = sim.getRadioMedium().getNeighbours(attackerRadio);
-    if (neighbours.contains(sinkRadio)) {
-      log.log("[FAIL] - has sink as neighbour\n");
-      continue;
-    }
-    log.log("[OK]\n");
-    return attacker;
-  }
+  var attackerId = 2 + r.nextInt(clients);
+  var attacker = sim.getMoteWithID(attackerId);
+  return attacker;
 }
 
 while(waiting_for_stable_network) {
@@ -404,13 +391,11 @@ GENERATE_MSG(5000, "continue");
 YIELD_THEN_WAIT_UNTIL(msg.equals("continue"));
 
 var attacker = selectAttacker();
-log.log("Network blackkhole attack from " + attacker.getID() + "!\n");
-sim.getEventCentral().logEvent("attack", "blackhole:" + attacker.getID());
+log.log("Selective forwarding attack from " + attacker.getID() + "!\n");
+sim.getEventCentral().logEvent("attack", "selectivefwd:" + attacker.getID());
 
-/* Configure black hole attack */
-setInt16(attacker, 'network_attacks_rpl_dio_fake_rank', 256);
-setBool(attacker, 'network_attacks_rpl_dio_only_parent', true);
-setBool(attacker, 'network_attacks_rpl_dao_fake_accept', true);
+/* Configure selective forwarding - drop 50% of forwarded application data */
+setInt16(attacker, 'network_attacks_udp_drop_rate, 50);
 setBool(attacker, 'network_attacks_udp_drop_fwd', true);
 
 GENERATE_MSG(1800000, "continue");

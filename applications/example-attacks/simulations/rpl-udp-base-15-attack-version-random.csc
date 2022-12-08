@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simconf>
   <simulation>
-    <title>STACK RPL-UDP-IDS Example Random Blackhole Attack</title>
+    <title>STACK RPL-UDP-IDS Example RPL Version Random Attack</title>
     <randomseed>123457</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -404,19 +404,20 @@ GENERATE_MSG(5000, "continue");
 YIELD_THEN_WAIT_UNTIL(msg.equals("continue"));
 
 var attacker = selectAttacker();
-log.log("Network blackkhole attack from " + attacker.getID() + "!\n");
-sim.getEventCentral().logEvent("attack", "blackhole:" + attacker.getID());
+log.log("Network RPL version attack from " + attacker.getID() + "!\n");
+sim.getEventCentral().logEvent("attack", "version:" + attacker.getID());
 
-/* Configure black hole attack */
-setInt16(attacker, 'network_attacks_rpl_dio_fake_rank', 256);
-setBool(attacker, 'network_attacks_rpl_dio_only_parent', true);
-setBool(attacker, 'network_attacks_rpl_dao_fake_accept', true);
-setBool(attacker, 'network_attacks_udp_drop_fwd', true);
-
-GENERATE_MSG(1800000, "continue");
-YIELD_THEN_WAIT_UNTIL(msg.equals("continue"));
-
-log.testOK();</script>
+GENERATE_MSG(1800000, "done");
+GENERATE_MSG(1000, "version");
+while (true) {
+  YIELD();
+  if (msg.equals("version")) {
+    setBool(attacker, 'network_attacks_rpl_dag_version_bump, true);
+    GENERATE_MSG(10000, "version");
+  } else if (msg.equals("done")) {
+    log.testOK();
+  }
+}</script>
       <active>true</active>
     </plugin_config>
     <width>600</width>

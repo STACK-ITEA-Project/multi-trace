@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simconf>
   <simulation>
-    <title>STACK RPL-UDP-IDS Example Random Blackhole Attack</title>
+    <title>STACK RPL-UDP-IDS Example DIS Flood Random Attack</title>
     <randomseed>123457</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -404,14 +404,12 @@ GENERATE_MSG(5000, "continue");
 YIELD_THEN_WAIT_UNTIL(msg.equals("continue"));
 
 var attacker = selectAttacker();
-log.log("Network blackkhole attack from " + attacker.getID() + "!\n");
-sim.getEventCentral().logEvent("attack", "blackhole:" + attacker.getID());
+log.log("Network DIS flooding attack from " + attacker.getID() + "!\n");
+sim.getEventCentral().logEvent("attack", "dfa:" + attacker.getID());
 
-/* Configure black hole attack */
-setInt16(attacker, 'network_attacks_rpl_dio_fake_rank', 256);
-setBool(attacker, 'network_attacks_rpl_dio_only_parent', true);
-setBool(attacker, 'network_attacks_rpl_dao_fake_accept', true);
-setBool(attacker, 'network_attacks_udp_drop_fwd', true);
+/* Configure DIS flood random attack */
+setBool(attacker, 'network_attacks_rpl_dfa', true);
+setInt16(attacker, 'network_attacks_rpl_dfa_period', 1000);
 
 GENERATE_MSG(1800000, "continue");
 YIELD_THEN_WAIT_UNTIL(msg.equals("continue"));
