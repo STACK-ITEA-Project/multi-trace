@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <simconf>
   <simulation>
-    <title>STACK RPL-UDP-IDS Example</title>
-    <randomseed>123456</randomseed>
+    <title>STACK RPL-UDP-IDS Example Neighbours</title>
+    <randomseed>generated</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       org.contikios.cooja.radiomediums.UDGM
@@ -12,12 +12,12 @@
       <success_ratio_rx>1.0</success_ratio_rx>
     </radiomedium>
     <events>
-      <logoutput>40000</logoutput>
+      <logoutput>400000</logoutput>
       <datatrace>true</datatrace>
     </events>
     <motetype>
       org.contikios.cooja.contikimote.ContikiMoteType
-      <identifier>mtype18515839</identifier>
+      <identifier>mtype5488177</identifier>
       <description>Cooja Mote Type #1</description>
       <source>[CONFIG_DIR]/../udp-server.c</source>
       <commands>make -j$(CPUS) udp-server.cooja TARGET=cooja</commands>
@@ -39,7 +39,7 @@
     </motetype>
     <motetype>
       org.contikios.cooja.contikimote.ContikiMoteType
-      <identifier>mtype885532605</identifier>
+      <identifier>mtype479000053</identifier>
       <description>Cooja Mote Type #2</description>
       <source>[CONFIG_DIR]/../udp-client.c</source>
       <commands>make -j$(CPUS) udp-client.cooja TARGET=cooja</commands>
@@ -70,7 +70,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>1</id>
       </interface_config>
-      <motetype_identifier>mtype18515839</motetype_identifier>
+      <motetype_identifier>mtype5488177</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -83,7 +83,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>2</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -96,7 +96,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>3</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -113,7 +113,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiRS232
         <history>asdf~;</history>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -126,7 +126,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>5</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -139,7 +139,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>6</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -152,7 +152,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>7</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -165,7 +165,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>8</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -178,7 +178,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>9</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -191,7 +191,7 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>10</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
     <mote>
       <interface_config>
@@ -204,16 +204,81 @@
         org.contikios.cooja.contikimote.interfaces.ContikiMoteID
         <id>11</id>
       </interface_config>
-      <motetype_identifier>mtype885532605</motetype_identifier>
+      <motetype_identifier>mtype479000053</motetype_identifier>
+    </mote>
+    <mote>
+      <interface_config>
+        org.contikios.cooja.interfaces.Position
+        <x>86.50153244156061</x>
+        <y>123.66419289301187</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiMoteID
+        <id>12</id>
+      </interface_config>
+      <motetype_identifier>mtype479000053</motetype_identifier>
+    </mote>
+    <mote>
+      <interface_config>
+        org.contikios.cooja.interfaces.Position
+        <x>126.037024944843</x>
+        <y>96.93550668179564</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiMoteID
+        <id>13</id>
+      </interface_config>
+      <motetype_identifier>mtype479000053</motetype_identifier>
+    </mote>
+    <mote>
+      <interface_config>
+        org.contikios.cooja.interfaces.Position
+        <x>152.60700326115108</x>
+        <y>74.05981478947481</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiMoteID
+        <id>14</id>
+      </interface_config>
+      <motetype_identifier>mtype479000053</motetype_identifier>
+    </mote>
+    <mote>
+      <interface_config>
+        org.contikios.cooja.interfaces.Position
+        <x>128.68994157412354</x>
+        <y>133.7555584169505</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiMoteID
+        <id>15</id>
+      </interface_config>
+      <motetype_identifier>mtype479000053</motetype_identifier>
+    </mote>
+    <mote>
+      <interface_config>
+        org.contikios.cooja.interfaces.Position
+        <x>158.72888550793317</x>
+        <y>118.52885363776664</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        org.contikios.cooja.contikimote.interfaces.ContikiMoteID
+        <id>16</id>
+      </interface_config>
+      <motetype_identifier>mtype479000053</motetype_identifier>
     </mote>
   </simulation>
   <plugin>
     org.contikios.cooja.plugins.SimControl
     <width>302</width>
-    <z>0</z>
+    <z>2</z>
     <height>157</height>
-    <location_x>2</location_x>
-    <location_y>1</location_y>
+    <location_x>310</location_x>
+    <location_y>0</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.Visualizer
@@ -221,88 +286,62 @@
       <moterelations>true</moterelations>
       <skin>org.contikios.cooja.plugins.skins.IDVisualizerSkin</skin>
       <skin>org.contikios.cooja.plugins.skins.UDGMVisualizerSkin</skin>
-      <skin>org.contikios.cooja.plugins.skins.MoteTypeVisualizerSkin</skin>
-      <viewport>2.4301209873510285 0.0 0.0 2.4301209873510285 -68.30698243874043 23.383794154495725</viewport>
+      <skin>org.contikios.cooja.plugins.skins.AttributeVisualizerSkin</skin>
+      <viewport>1.68758401899377 0.0 0.0 1.68758401899377 -43.185404471347574 22.822079273955353</viewport>
     </plugin_config>
     <width>306</width>
     <z>1</z>
     <height>328</height>
-    <location_x>3</location_x>
-    <location_y>158</location_y>
+    <location_x>1</location_x>
+    <location_y>0</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.LogListener
     <plugin_config>
-      <filter>App</filter>
+      <filter>(App|ATTACK)</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
-    <width>519</width>
-    <z>4</z>
-    <height>487</height>
-    <location_x>304</location_x>
-    <location_y>-1</location_y>
-  </plugin>
-  <plugin>
-    org.contikios.cooja.plugins.RadioLogger
-    <plugin_config>
-      <split>260</split>
-      <formatted_time />
-      <analyzers name="6lowpan" />
-    </plugin_config>
-    <width>500</width>
+    <width>893</width>
     <z>3</z>
-    <height>488</height>
-    <location_x>823</location_x>
-    <location_y>-2</location_y>
+    <height>470</height>
+    <location_x>0</location_x>
+    <location_y>326</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.ScriptRunner
     <plugin_config>
-      <script>success = false;
-var senders = {};
-var waiting_for_stable_network = true;
-// Number of clients (the sink excluded)
-var clients = sim.getMotesCount() - 1;
-var msgrecv = /.+INFO: App.+Received +message.+ from ([0-9a-f:]+).*/;
-
-TIMEOUT(4000000, if(success) { log.testOK(); }); /* milliseconds. print last msg at timeout */
-
-while(waiting_for_stable_network) {
-    YIELD();
-    if (id == 1) {
-        match = msg.match(msgrecv)
-        if (match) {
-            senders[match[1]] = true;
-            var size = Object.keys(senders).length;
-            log.log("sink has contact with " + match[1] + " (" + (clients - size) + " remaining)\n");
-            if (size &gt;= clients) {
-                log.log("contact with all clients!\n");
-                waiting_for_stable_network = false;
-            }
-        }
-    }
+      <script>function f(value) {
+  return (Math.round(value * 100) / 100).toFixed(2);
 }
 
-GENERATE_MSG(2000, "continue");
-YIELD_THEN_WAIT_UNTIL(msg.equals("continue"));
-
-sim.getEventCentral().logEvent("network", "steady-state");
-log.log("network steady state!\n");
-
-success = true;
-
-GENERATE_MSG(3600000, "continue");
-YIELD_THEN_WAIT_UNTIL(msg.equals("continue"));
+var sink = sim.getMoteWithID(1);
+var sinkPos = sink.getInterfaces().getPosition();
+var count = sim.getMotesCount();
+var i;
+var j;
+for (i = 2; i &lt; count; i++) {
+  var m = sim.getMoteWithID(i);
+  var r = m.getInterfaces().getRadio();
+  var d = sinkPos.getDistanceTo(r.getPosition());
+  var neighbours = sim.getRadioMedium().getNeighbours(r);
+  log.log("Node-" + m.getID() + " " + f(d) + "m [");
+  for (j = 0; j &lt; neighbours.length; j++) {
+      var nbr = neighbours[j];
+      var nbrDist = sinkPos.getDistanceTo(nbr.getPosition());
+      log.log(" Node-" + nbr.getMote().getID() + " " + f(nbrDist) + "m");
+  }
+  log.log("\n");
+}
 
 log.testOK();</script>
       <active>true</active>
     </plugin_config>
-    <width>600</width>
-    <z>2</z>
-    <height>642</height>
-    <location_x>902</location_x>
-    <location_y>53</location_y>
+    <width>715</width>
+    <z>0</z>
+    <height>857</height>
+    <location_x>900</location_x>
+    <location_y>0</location_y>
   </plugin>
 </simconf>
 
