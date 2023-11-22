@@ -1,21 +1,16 @@
 #ifndef _MLP_H_
 #define _MLP_H_
 
+
 // Constant(s)
 
 #include <sys/types.h>
-// #include "fixedpoint.h"
 #include <inttypes.h>
 #include <stdio.h>
 
+#define FDATK_NCOL 17 // number of data columns per client
+
 #define MAX_ELEMENTS (256*256)
-
-
-#define ATTACK_DETECTION_NO 0
-#define ATTACK_DETECTION_DIO_DROP 1
-#define ATTACK_DETECTION_DIS_REPEAT_MUL 2
-#define ATTACK_DETECTION_DIS_REPEAT 3
-#define NUM_INPUT_LENGTH 40
 
 // Type(s)
 
@@ -26,6 +21,30 @@ typedef struct MatrixStruct
     int transposed;
     float* elements;
 } Matrix;
+
+void setElement(int16_t row, int16_t column, float element, Matrix *matrix);
+/**
+ * Get element of matrix[row, col]
+ */
+float getElement(int16_t row, int16_t column, Matrix *matrix);
+/**
+ * 
+ */
+void setRowsColumns(int16_t rows, int16_t columns, Matrix *matrix);
+
+/**
+ * Run Inference Attact Detection.
+ * Return values:
+ * ATTACK_DETECTION_NO 0
+ * ATTACK_DETECTION_DIO_DROP 1
+ * ATTACK_DETECTION_DIS_REPEAT_MUL 2
+ * ATTACK_DETECTION_DIS_REPEAT 3
+ */
+int8_t RunInference_AttackDetection(Matrix* input, Matrix* output);
+
+void Matmul(Matrix *matrixA, Matrix *matrixB, Matrix *matrixC, int verbose);
+void Relu(Matrix *matrix);
+void bias_add(Matrix *matrix, Matrix *bias);
 
 // Function declarations
 

