@@ -395,7 +395,7 @@ log.log("network steady state?\n");
 sim.getEventCentral().logEvent("network", "steady-state");
 log.log("network steady state!\n");
 
-GENERATE_MSG(4000000, "continue");
+GENERATE_MSG(40000000, "continue");
 
 GENERATE_MSG(1000000, "start_attack");
 var attacker = sim.getMoteWithID(7);

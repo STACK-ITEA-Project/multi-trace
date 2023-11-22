@@ -34,8 +34,14 @@
 #include "app-message.h"
 #include "icmp6-stats.h"
 #include <inttypes.h>
+#include "project-conf.h"
 
-#include "flooding-attack-detection-model-mlp.h"
+/* Implementation by Yonsei */
+#if RUN_MODEL
+#include "model.h"
+#endif /* RUN_MODEL */
+#define FDATK_NCLI 19 // CHANGE ME:number of clients
+/* __Implementation by Yonsei */
 
 #include "sys/log.h"
 #define LOG_MODULE "App"
@@ -48,8 +54,6 @@
 static struct simple_udp_connection udp_conn;
 
 /* Implementation by Yonsei */
-#define FDATK_NCOL 17 // number of data columns per client
-#define FDATK_NCLI 11 // number of clients
 
 typedef struct {
   uint32_t data[FDATK_NCOL];
@@ -63,33 +67,33 @@ typedef struct {
 } FDATK_DATA_INPUT;
 
 FDATK_DATA_INPUT fdatk_model_input[1];
+// #endif /* RUN_MODEL */
 /* __Implementation by Yonsei */
+
 
 PROCESS(udp_server_process, "UDP server");
 AUTOSTART_PROCESSES(&udp_server_process);
 /*---------------------------------------------------------------------------*/
 
+
 /* Implementation by Yonsei */
+#if RUN_MODEL
 static int
 run_inference(int* inference_result)
 {
-
-
-  LOG_INFO("run_inference\n");
   // call detection function
-  float input[FDATK_NCLI * FDATK_NCOL];
+    float input[FDATK_NCLI * FDATK_NCOL];
 
-  for (int i=0; i<FDATK_NCLI; i++){
-    for (int j=0; j<FDATK_NCOL; j++){
-      input[i*FDATK_NCOL + j] = fdatk_model_input->data[i].data[j];
+    for (int i=0; i<FDATK_NCLI; i++){
+        for (int j=0; j<FDATK_NCOL; j++){
+            input[i*FDATK_NCOL + j] = fdatk_model_input->data[i].data[j];
+        }
     }
-  }
-
-  LOG_INFO("AttackDectectionExample\n");
 
   *inference_result = AttackDectectionExample(input);
   return 0;
 }
+# endif /* RUN_MODEL */
 
 static void reset_model(){
   LOG_INFO("reset_model\n");
@@ -100,7 +104,9 @@ static void reset_model(){
 
 static void init_model(){
   LOG_INFO("Init model\n");
+# if RUN_MODEL
   Init_Detection();
+# endif /* RUN_MODEL */
   
   for (int i=0; i < FDATK_NCLI; i++){
       uip_ip6addr(&(fdatk_model_input->sender[i]), 0, 0, 0, 0, 0, 0, 0, 0);
@@ -118,7 +124,7 @@ static bool input_ready(){
     }
   }
 
-  LOG_INFO("input_ready: %d/%d\n", has_new_data, FDATK_NCLI);
+  LOG_INFO("input_ready: %d/%d\n", has_new_data+1, FDATK_NCLI);
   return has_new_data == FDATK_NCLI-1;
 }
 /* __Implementation by Yonsei */
@@ -177,27 +183,29 @@ udp_rx_callback(struct simple_udp_connection *c,
     // LOG_INFO_("STEP4 sender_idx: %d, n_registered_cli: %d", sender_idx, fdatk_model_input->n_registered_cli);
     // LOG_INFO_("\n");
     // copy data
+    LOG_INFO("Data:");
     for (int i=0; i<FDATK_NCOL; i++){
+      LOG_INFO_("%"PRIu32",", data_percli->data[i]);
       fdatk_model_input->data[sender_idx].data[i] = data_percli->data[i];
     }
     fdatk_model_input->has_new_data[sender_idx] = true;
-
+    LOG_INFO_("\n");
 
     // check if all clients have sent data
     if (input_ready() == true){
-      LOG_INFO_("input_ready!\n");
+
       int inference_result = -1;
       run_inference(&inference_result);
-
+      LOG_INFO("inference_result: %d\n", inference_result);
 
       // LOG DATA
-      LOG_PRINT_("FDATK_DATA:");
+      LOG_INFO_("FDATK_DATA:");
       for (int i=0; i<FDATK_NCLI; i++){
         for (int j=0; j<FDATK_NCOL; j++){
-          LOG_PRINT_("%"PRIu32",", fdatk_model_input->data[i].data[j]);
+          LOG_INFO_("%"PRIu32",", fdatk_model_input->data[i].data[j]);
         }
       }
-      LOG_PRINT_("\n");
+      LOG_INFO_("\n");
 
       // reset
       reset_model();
