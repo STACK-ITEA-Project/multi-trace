@@ -1,4 +1,5 @@
 #include "contiki.h"
+#include "sys/node-id.h"
 #include "net/routing/routing.h"
 #include "random.h"
 #include "net/netstack.h"
@@ -17,6 +18,31 @@
 #endif
 #include <inttypes.h>
 
+#ifndef IN_DEVICE_DETECTION
+#define IN_DEVICE_DETECTION 0
+#endif /* IN_DEVICE_DETECTION */
+
+#define BLACKHOLE_ATTACK (0 && IN_DEVICE_DETECTION)
+#define FLOODING_ATTACK   1
+
+#if IN_DEVICE_DETECTION
+#include "network-attacks.h"
+#include "attack-detection.h"
+
+#ifdef CONTIKI_TARGET_COOJA
+/* Cooja */
+#define BLACKHOLE_ATTACK_NODE 9
+#define BLACKHOLE_ATTACK_TIME (45 * 60 * CLOCK_SECOND)
+/* #define BLACKHOLE_ATTACK_DURATION (60 * 60 * CLOCK_SECOND) */
+#else /* CONTIKI_TARGET_COOJA */
+/* RISE Testbed */
+#define BLACKHOLE_ATTACK_NODE 29933 /* attacking: pi08 */
+#define BLACKHOLE_ATTACK_TIME (30 * 60 * CLOCK_SECOND)
+/* #define BLACKHOLE_ATTACK_DURATION (60 * 60 * CLOCK_SECOND) */
+#endif /* ! CONTIKI_TARGET_COOJA */
+
+#endif /* IN_DEVICE_DETECTION */
+
 #include "sys/log.h"
 
 #include "rpl.h"
@@ -33,14 +59,57 @@
 /* Implementation by Yonsei */
 #define data_size 17
 char dis_attack_state = 0;
+#if FLOODING_ATTACK
 static struct etimer attack_timer;
+#endif /* FLOODING_ATTACK */
 bool flooding_attack_send_dis = false;
 /* __Implementation by Yonsei */
 
 static struct simple_udp_connection udp_conn;
+static bool is_attacker;
 
-
-extern rpl_instance_t curr_instance;
+/*---------------------------------------------------------------------------*/
+#if BLACKHOLE_ATTACK
+static struct ctimer blackhole_attack_timer;
+#ifdef BLACKHOLE_ATTACK_DURATION
+static void
+stop_attack(void *ptr)
+{
+  network_attacks_rpl_dio_fake_rank = 0;
+  network_attacks_udp_drop_fwd = false;
+  network_attacks_rpl_dao_fake_accept = false;
+  network_attacks_rpl_dio_only_parent = false;
+  network_attacks_rpl_dio_send = false;
+  network_attacks_rpl_dio_reset = false;
+  is_attacker = false;
+  LOG_INFO("=========================\n");
+  LOG_INFO("BLACKHOLE ATTACK - END!\n");
+  LOG_INFO("=========================\n");
+  /* Indicate no longer attacking but has been an attacker */
+  LOG_ANNOTATE("#A color=WHITE\n");
+}
+#endif /* BLACKHOLE_ATTACK_DURATION */
+/*---------------------------------------------------------------------------*/
+static void
+start_attack(void *ptr)
+{
+  network_attacks_init();
+  LOG_INFO("=========================\n");
+  LOG_INFO("BLACKHOLE ATTACK - BEGIN!\n");
+  LOG_INFO("=========================\n");
+  network_attacks_rpl_dio_fake_rank = 128;
+  network_attacks_udp_drop_fwd = true;
+  network_attacks_rpl_dao_fake_accept = true;
+  network_attacks_rpl_dio_only_parent = true;
+  network_attacks_rpl_dio_send = true;
+  network_attacks_rpl_dio_reset = true;
+  is_attacker = true;
+  LOG_ANNOTATE("#A color=RED\n");
+#ifdef BLACKHOLE_ATTACK_DURATION
+  ctimer_set(&blackhole_attack_timer, BLACKHOLE_ATTACK_DURATION, stop_attack, NULL);
+#endif /* BLACKHOLE_ATTACK_DURATION */
+}
+#endif /* BLACKHOLE_ATTACK */
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_client_process, "UDP client");
 AUTOSTART_PROCESSES(&udp_client_process);
@@ -104,9 +173,6 @@ to_seconds(uint64_t time)
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_client_process, ev, data)
 {
-
-  shell_command_set_register(&client_shell_command_set);
-
   static struct etimer periodic_timer;
   static uint32_t count;
   static app_message_t msg;
@@ -115,11 +181,26 @@ PROCESS_THREAD(udp_client_process, ev, data)
   uint16_t rank;
   uint8_t dag_version;
 
-
   /* Implementation by Yonsei */
   uint32_t data_arr[data_size];
   /* __Implementation by Yonsei */
   PROCESS_BEGIN();
+
+  shell_command_set_register(&client_shell_command_set);
+
+#if IN_DEVICE_DETECTION
+  /* Implementation by RISE */
+  attack_detection_init();
+#endif /* IN_DEVICE_DETECTION */
+
+#if BLACKHOLE_ATTACK
+  /* Implementation by RISE */
+  if(node_id == BLACKHOLE_ATTACK_NODE) {
+    LOG_INFO("Preparing attack in %lu seconds\n",
+             (unsigned long)(BLACKHOLE_ATTACK_TIME / CLOCK_SECOND));
+    ctimer_set(&blackhole_attack_timer, BLACKHOLE_ATTACK_TIME, start_attack, NULL);
+  }
+#endif /* BLACKHOLE_ATTACK */
 
   /* Initialize ICMP6/RPL statistics */
   icmp6_stats_init();
@@ -127,6 +208,8 @@ PROCESS_THREAD(udp_client_process, ev, data)
   /* Initialize UDP connection */
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
                       UDP_SERVER_PORT, udp_rx_callback);
+
+  LOG_ANNOTATE("#A color=GREEN\n");
 
   etimer_set(&periodic_timer, random_rand() % SEND_INTERVAL);
   while(1) {
@@ -178,8 +261,22 @@ PROCESS_THREAD(udp_client_process, ev, data)
       simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
       count++;
 
+#if IN_DEVICE_DETECTION
+      /* Implementation by RISE */
+      if(is_attacker) {
+        // Reset variables
+        attack_detection_reset();
+      } else {
+        if(attack_detection_run()) {
+          /* Blackhole-like attack detected */
+          LOG_ANNOTATE("#A color=YELLOW\n");
+        }
+      }
+#endif /* IN_DEVICE_DETECTION */
+
       /* Implementation by Yonsei */
 
+#if FLOODING_ATTACK
       LOG_INFO("dis_attack_state: %d\n", dis_attack_state);
       if (dis_attack_state == 1){
         etimer_set(&attack_timer, 360 * CLOCK_SECOND);
@@ -187,12 +284,16 @@ PROCESS_THREAD(udp_client_process, ev, data)
         LOG_INFO("FLOODING ATTACK IS STARTED!\n");
         flooding_attack_send_dis = true; // Used for sending dis packet even after joining the DODAG
         rpl_timers_dio_reset("FLOODING ATTACK IS STARTED!");
+        is_attacker = true;
         etimer_set(&attack_timer, 360 * CLOCK_SECOND);
+        LOG_ANNOTATE("#A color=MAGENTA\n");
       } else if (dis_attack_state == 2 && etimer_expired(&attack_timer)){
         dis_attack_state = 1;
         LOG_INFO("FLOODING ATTACK IS FINISHED!\n");
         flooding_attack_send_dis = false;
         rpl_timers_dio_reset("FLOODING ATTACK IS FINISHED!");
+        is_attacker = false;
+        LOG_ANNOTATE("#A color=WHITE\n");
       }
 
 
@@ -200,6 +301,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
       if(flooding_attack_send_dis){
         rpl_icmp6_dis_output(NULL);
       }
+#endif /* FLOODING_ATTACK */
       /* __Implementation by Yonsei */
     } else {
       LOG_INFO("Not reachable yet\n");

@@ -251,6 +251,10 @@ PROCESS_THREAD(udp_server_process, ev, data)
   simple_udp_register(&udp_conn, UDP_SERVER_PORT, NULL,
                       UDP_CLIENT_PORT, udp_rx_callback);
 
+  /* Hide the root attribute in Cooja */
+  LOG_ANNOTATE("#A root\n");
+  LOG_ANNOTATE("#A color=LIGHTGRAY\n");
+
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
