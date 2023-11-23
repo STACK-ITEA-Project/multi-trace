@@ -40,7 +40,7 @@
 #if RUN_MODEL
 #include "model.h"
 #endif /* RUN_MODEL */
-#define FDATK_NCLI 19 // CHANGE ME:number of clients
+#define FDATK_NCLI 19 // CHANGE ME:number of clients. Gateway is not included.
 /* __Implementation by Yonsei */
 
 #include "sys/log.h"
@@ -93,6 +93,11 @@ run_inference(int* inference_result)
   *inference_result = AttackDectectionExample(input);
   return 0;
 }
+
+static char detection_result_repr[2][15] = {
+  "Not detected\0",
+  "Detected\0"
+};
 # endif /* RUN_MODEL */
 
 static void reset_model(){
@@ -124,8 +129,8 @@ static bool input_ready(){
     }
   }
 
-  LOG_INFO("input_ready: %d/%d\n", has_new_data+1, FDATK_NCLI);
-  return has_new_data == FDATK_NCLI-1;
+  LOG_INFO("input_ready: %d/%d", has_new_data, FDATK_NCLI);
+  return has_new_data == FDATK_NCLI;
 }
 /* __Implementation by Yonsei */
 
@@ -139,14 +144,17 @@ udp_rx_callback(struct simple_udp_connection *c,
          uint16_t datalen)
 {
   
-  LOG_INFO("Received ");
   int8_t rssi = (int8_t)uipbuf_get_attr(UIPBUF_ATTR_RSSI);
+  LOG_INFO("Received (%d dBm)", rssi);
   if(datalen == sizeof(app_message_t))
   {
     app_message_t *msg = (app_message_t *)data;
     LOG_INFO_("message %"PRIu32" (rank %u) from ",
               app_read_uint32(msg->seqno),
               app_read_uint16(msg->rpl_rank));
+    LOG_INFO_(" from ");
+    LOG_INFO_6ADDR(sender_addr);
+    LOG_INFO_("\n");
   }
   /* Implementation by Yonsei */
   else if(datalen == sizeof(FDATK_DATA_PERCLI))
@@ -157,7 +165,7 @@ udp_rx_callback(struct simple_udp_connection *c,
     // received successfully
 
     FDATK_DATA_PERCLI *data_percli = (FDATK_DATA_PERCLI *)data;
-    LOG_INFO_("successfully received data of size %u from ", datalen);
+    LOG_INFO_("data of size %u from ", datalen);
     LOG_INFO_6ADDR(sender_addr);
     LOG_INFO_("\n");
     
@@ -196,10 +204,11 @@ udp_rx_callback(struct simple_udp_connection *c,
 
       int inference_result = -1;
       run_inference(&inference_result);
-      LOG_INFO("inference_result: %d\n", inference_result);
+      
+      LOG_INFO("FLOODING ATTACK DETECTION RESULT: (%d)%s\n", inference_result, detection_result_repr[inference_result]);
 
       // LOG DATA
-      LOG_INFO_("FDATK_DATA:");
+      LOG_INFO("FDATK_DATA:");
       for (int i=0; i<FDATK_NCLI; i++){
         for (int j=0; j<FDATK_NCOL; j++){
           LOG_INFO_("%"PRIu32",", fdatk_model_input->data[i].data[j]);
@@ -217,14 +226,11 @@ udp_rx_callback(struct simple_udp_connection *c,
   else
   {
     // exception handling
-    LOG_INFO_("unknown data of size %u from ", datalen);
+    LOG_INFO_("unknown data of size %u", datalen);
+    LOG_INFO_(" from ");
+    LOG_INFO_6ADDR(sender_addr);
+    LOG_INFO_("\n");
   }
-  LOG_INFO_(" from ");
-  LOG_INFO_6ADDR(sender_addr);
-  
-  LOG_INFO_(", RSSI: (%d dBm)", rssi);
-
-  LOG_INFO_("\n");
 #if WITH_SERVER_REPLY
   /* send back the same string to the client as an echo reply */
   LOG_INFO("Sending response.\n");
