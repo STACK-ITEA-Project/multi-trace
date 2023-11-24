@@ -342,7 +342,7 @@
       <viewport>3.2250320025377 0.0 0.0 3.2250320025377 -102.8619488746069 12.663892621256627</viewport>
     </plugin_config>
     <width>399</width>
-    <z>0</z>
+    <z>2</z>
     <height>414</height>
     <location_x>1</location_x>
     <location_y>157</location_y>
@@ -355,7 +355,7 @@
       <analyzers name="6lowpan" />
     </plugin_config>
     <width>500</width>
-    <z>3</z>
+    <z>4</z>
     <height>573</height>
     <location_x>1024</location_x>
     <location_y>0</location_y>
@@ -412,10 +412,10 @@ log.testOK();</script>
       <active>true</active>
     </plugin_config>
     <width>652</width>
-    <z>1</z>
+    <z>0</z>
     <height>576</height>
-    <location_x>860</location_x>
-    <location_y>124</location_y>
+    <location_x>903</location_x>
+    <location_y>83</location_y>
   </plugin>
   <plugin>
     org.contikios.cooja.plugins.LogListener
@@ -425,10 +425,23 @@ log.testOK();</script>
       <coloring />
     </plugin_config>
     <width>621</width>
-    <z>2</z>
+    <z>1</z>
     <height>570</height>
     <location_x>400</location_x>
     <location_y>1</location_y>
+  </plugin>
+  <plugin>
+    org.contikios.cooja.plugins.LogListener
+    <plugin_config>
+      <filter>ID:1 .*FLOOD</filter>
+      <formatted_time />
+      <coloring />
+    </plugin_config>
+    <width>1552</width>
+    <z>3</z>
+    <height>240</height>
+    <location_x>4</location_x>
+    <location_y>569</location_y>
   </plugin>
 </simconf>
 
