@@ -204,8 +204,15 @@ udp_rx_callback(struct simple_udp_connection *c,
 
       int inference_result = -1;
       run_inference(&inference_result);
-      
-      LOG_INFO("FLOODING ATTACK DETECTION RESULT: (%d)%s\n", inference_result, detection_result_repr[inference_result]);
+
+      LOG_INFO("FLOODING ATTACK DETECTION RESULT (%d): %s\n",
+               inference_result,
+               detection_result_repr[MIN(1, inference_result)]);
+
+      /* Skip the initial detection at start */
+      if(inference_result > 0 && clock_seconds() > 300) {
+        LOG_ANNOTATE("#A color=YELLOW\n");
+      }
 
       // LOG DATA
       LOG_INFO("FDATK_DATA:");
