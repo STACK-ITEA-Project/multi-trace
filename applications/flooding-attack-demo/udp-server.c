@@ -129,7 +129,7 @@ static bool input_ready(){
     }
   }
 
-  LOG_INFO("input_ready: %d/%d", has_new_data, FDATK_NCLI);
+  LOG_INFO("input_ready: %d/%d\n", has_new_data, FDATK_NCLI);
   return has_new_data == FDATK_NCLI;
 }
 /* __Implementation by Yonsei */
@@ -143,9 +143,9 @@ udp_rx_callback(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
-  
+
   int8_t rssi = (int8_t)uipbuf_get_attr(UIPBUF_ATTR_RSSI);
-  LOG_INFO("Received (%d dBm)", rssi);
+  LOG_INFO("Received ");
   if(datalen == sizeof(app_message_t))
   {
     app_message_t *msg = (app_message_t *)data;
@@ -154,7 +154,7 @@ udp_rx_callback(struct simple_udp_connection *c,
               app_read_uint16(msg->rpl_rank));
     LOG_INFO_(" from ");
     LOG_INFO_6ADDR(sender_addr);
-    LOG_INFO_("\n");
+    LOG_INFO_(" (%d dBm)\n", rssi);
   }
   /* Implementation by Yonsei */
   else if(datalen == sizeof(FDATK_DATA_PERCLI))
@@ -167,8 +167,8 @@ udp_rx_callback(struct simple_udp_connection *c,
     FDATK_DATA_PERCLI *data_percli = (FDATK_DATA_PERCLI *)data;
     LOG_INFO_("data of size %u from ", datalen);
     LOG_INFO_6ADDR(sender_addr);
-    LOG_INFO_("\n");
-    
+    LOG_INFO_(" (%d dBm)\n", rssi);
+
     // check existing sender
     int sender_idx = -1;
 
@@ -221,7 +221,7 @@ udp_rx_callback(struct simple_udp_connection *c,
     }
 
     /* __Implementation by Yonsei */
-      
+
   }
   else
   {
@@ -229,7 +229,7 @@ udp_rx_callback(struct simple_udp_connection *c,
     LOG_INFO_("unknown data of size %u", datalen);
     LOG_INFO_(" from ");
     LOG_INFO_6ADDR(sender_addr);
-    LOG_INFO_("\n");
+    LOG_INFO_(" (%d dBm)\n", rssi);
   }
 #if WITH_SERVER_REPLY
   /* send back the same string to the client as an echo reply */
