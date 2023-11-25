@@ -148,6 +148,7 @@ PT_THREAD(cmd_dis_repeat_attack(struct pt *pt, shell_output_func output, char *a
 
   PT_BEGIN(pt);
   dis_attack_state = 1;
+  etimer_set(&attack_timer, 360 * CLOCK_SECOND);
   PT_END(pt);
 }
 
@@ -278,8 +279,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
 #if FLOODING_ATTACK
       LOG_INFO("dis_attack_state: %d\n", dis_attack_state);
-      if (dis_attack_state == 1){
-        etimer_set(&attack_timer, 360 * CLOCK_SECOND);
+      if (dis_attack_state == 1 && etimer_expired(&attack_timer)){
         dis_attack_state = 2;
         LOG_INFO("FLOODING ATTACK IS STARTED!\n");
         flooding_attack_send_dis = true; // Used for sending dis packet even after joining the DODAG
@@ -287,13 +287,14 @@ PROCESS_THREAD(udp_client_process, ev, data)
         is_attacker = true;
         etimer_set(&attack_timer, 360 * CLOCK_SECOND);
         LOG_ANNOTATE("#A color=MAGENTA\n");
-      } else if (dis_attack_state == 2 && etimer_expired(&attack_timer)){
+      } else if (dis_attack_state == 2  && etimer_expired(&attack_timer)){
         dis_attack_state = 1;
         LOG_INFO("FLOODING ATTACK IS FINISHED!\n");
         flooding_attack_send_dis = false;
         rpl_timers_dio_reset("FLOODING ATTACK IS FINISHED!");
         is_attacker = false;
         LOG_ANNOTATE("#A color=WHITE\n");
+        etimer_set(&attack_timer, 360 * CLOCK_SECOND);
       }
 
 
