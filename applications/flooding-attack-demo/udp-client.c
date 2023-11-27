@@ -262,6 +262,12 @@ PROCESS_THREAD(udp_client_process, ev, data)
       simple_udp_sendto(&udp_conn, &msg, sizeof(msg), &dest_ipaddr);
       count++;
 
+      /* Hide init, show rank */
+      if(count == 1) {
+        LOG_ANNOTATE("#A init\n");
+      }
+      LOG_ANNOTATE("#A r=%u\n", rank);
+
 #if IN_DEVICE_DETECTION
       /* Implementation by RISE */
       if(is_attacker) {
