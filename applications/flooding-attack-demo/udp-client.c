@@ -147,8 +147,10 @@ PT_THREAD(cmd_dis_repeat_attack(struct pt *pt, shell_output_func output, char *a
 {
 
   PT_BEGIN(pt);
+#if FLOODING_ATTACK
   dis_attack_state = 1;
   etimer_set(&attack_timer, 360 * CLOCK_SECOND);
+#endif /* FLOODING_ATTACK */
   PT_END(pt);
 }
 
